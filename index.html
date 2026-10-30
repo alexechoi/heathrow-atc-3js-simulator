@@ -177,6 +177,10 @@
             ><span id="selected-title">BAW283</span></span
           ><span id="selected-type" class="muted">B789 · HEAVY</span>
         </div>
+        <div id="controller-channel" class="controller-channel">
+          APPROACH · HEATHROW
+        </div>
+        <button id="ground-action" class="ground-action hidden"></button>
         <div id="command-hint">Assign a runway to sequence the approach.</div>
         <div class="runway-buttons">
           <button data-runway="27R">
@@ -271,8 +275,10 @@
       <ol>
         <li>
           <b>Continuous arrivals and departures.</b> Switch traffic tabs. Clear
-          arrivals to land; release departures only when the runway and final
-          are clear. Use Hold or Go around to make a gap.
+          arrivals to land. For departures: approve pushback, issue taxi
+          clearance, accept the ground-to-tower handover, then clear takeoff
+          when the runway and final are clear. Hand climbing flights to London
+          Departure.
         </li>
         <li>
           <b>Draw your own vectors.</b> Click Draw route, then drag a path in
@@ -288,8 +294,9 @@
           losses end your shift.
         </li>
         <li>
-          <b>Go around.</b> Cancel an approach and climb away when things get
-          crowded.
+          <b>Hold outside the airport.</b> Hold sends aircraft to an external
+          racetrack stack. Radar shows all four stacks. Go around cancels an
+          approach and climbs away.
         </li>
       </ol>
       <div class="help-keys">

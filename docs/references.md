@@ -49,3 +49,18 @@ Runway paint is now separate vector geometry: threshold stripes, edge lines, cen
 A review discovered that the screenshot browser had sometimes timed out on Esri's image export service and used the fallback. Imagery now uses pre-rendered Esri tiles, and final video capture explicitly fails if the satellite mosaic is absent. Capture also waits for GPU completion to prevent partial frames with software WebGL.
 
 The close-range ground was subsequently rebuilt completely inside the playable airport boundary. Reference imagery remains for geolocation and distant surroundings, while terminal precincts, taxiway shoulders, service roads and turf use real-scale mesh surfaces. A dedicated photographic grass texture replaced the rocky aerial texture. The material shader cache now distinguishes each surface variant; shader compile errors are included in browser checks. The distant terrain is a ring with no overlapping central plane, and terrain depth layers are ordered explicitly.
+
+## Aircraft and ground-control review
+
+These four real photographs were downloaded and inspected for silhouettes, cockpit windows, engines, gear and paint placement; they are reference-only, not bundled image textures:
+
+- [British Airways 787-9 G-ZBKF, Boston, March 2025](https://commons.wikimedia.org/wiki/File:British_Airways_Boeing_787-9_G-ZBKF_departing_Boston_March_2025_2.jpg): navy belly and nacelles, red speedmarque, Chatham tail, raked wingtips and two-axle main bogies.
+- [Virgin Atlantic A350-1000 G-VJAM](https://commons.wikimedia.org/wiki/File:Virgin_Atlantic_airbus_a350-1000_G-VJAM.jpg): cockpit mask, red engines, white Virgin tail mark, curved wingtips and three-axle bogies.
+- [Emirates A380 A6-EOG, Perth, 2024](https://commons.wikimedia.org/wiki/File:Emirates_Airbus_A380_A6-EOG_Perth_2024_(01).jpg): double-deck fuselage, four engines, gold wordmark and UAE flag fin.
+- [Singapore Airlines 777-300ER 9V-SNC at Heathrow](https://commons.wikimedia.org/wiki/File:Singapore_Airlines,_Boeing_777-300ER,_9V-SNC_-_LHR_(23932929890).jpg): blue/gold cheatline, gold bird fin and large GE90-style nacelles.
+
+Studio renders and in-airport screenshots were reviewed for both livery fit and silhouette. This exposed oversized UV lettering, buried flat cockpit panes, open engine interiors and the wrong Singapore logo crop; these were corrected. Fire now uses animated soft noise particles with a rising smoke plume rather than solid faceted spheres. These remain procedural game aircraft, not photogrammetric assets.
+
+Ground paths are generated from the same mapped taxiway centrelines used to render the pavement. The generator joins coincident endpoints, excludes paths outside the central runway boundaries, and computes connected routes from reserved stand lead-ins to the mapped A1/N1 holding points. Active stands are removed from static parking. Tests check that taxi positions remain on the selected polyline, require a ground/tower handover before takeoff clearance, and verify the departure handoff. Stand assignments and runway-entry clearances are simplified game procedures.
+
+Four external racetracks replace local orbits above the airport. Their names and relative quadrants reference Heathrow's holding system; their coordinates, spacing, altitude and orientation are compressed game values. The radar overlay is a game diagram, not an aeronautical chart.

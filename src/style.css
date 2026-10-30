@@ -1232,3 +1232,44 @@ body:has(#film:not(.hidden)) #imagery-credit {
     width: auto;
   }
 }
+
+.controller-channel {
+  padding: 9px 16px 0;
+  font: 9px "Space Grotesk Variable";
+  color: var(--mint);
+  letter-spacing: 1px;
+}
+.ground-action {
+  display: block;
+  width: calc(100% - 26px);
+  margin: 12px 13px 0;
+  padding: 12px;
+  color: #14271e;
+  background: var(--mint);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+body.drawing #labels,
+body.drawing .traffic,
+body.drawing #command {
+  pointer-events: none;
+  opacity: 0.35;
+}
+#world {
+  touch-action: none;
+}
+body.drawing #world {
+  cursor: crosshair;
+}
+@media (max-width: 700px) {
+  .controller-channel {
+    font-size: 7px;
+    padding: 8px 10px 0;
+  }
+  .ground-action {
+    font-size: 9px;
+    padding: 9px;
+    margin-top: 8px;
+  }
+}

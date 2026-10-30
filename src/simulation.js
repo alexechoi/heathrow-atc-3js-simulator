@@ -1,8 +1,51 @@
+import groundLayout from "../public/data/heathrow-ground.json" with { type: "json" };
+export const GROUND_LAYOUT = groundLayout;
 // Deterministic game simulation. Metres, seconds, radians; compressed arcade spacing.
 export const RUNWAYS = {
   "27R": { z: -710, threshold: 1898, length: 3902 },
   "27L": { z: 710, threshold: 1844, length: 3660 },
 };
+// Four geographically compressed external holds, kept clear of the airport.
+export const HOLDING_AREAS = [
+  { name: "BOVINGDON", x: -6500, z: -8500 },
+  { name: "LAMBOURNE", x: 8500, z: -7000 },
+  { name: "BIGGIN", x: 8500, z: 7500 },
+  { name: "OCKHAM", x: -6000, z: 8500 },
+];
+function racetrack(p) {
+  const radius = 700,
+    leg = 1600,
+    arc = Math.PI * radius,
+    total = leg * 2 + arc * 2;
+  let d = (((p.holdDistance || 0) % total) + total) % total,
+    x,
+    z,
+    h;
+  if (d < leg) {
+    x = -leg / 2 + d;
+    z = -radius;
+    h = 0;
+  } else if ((d -= leg) < arc) {
+    const a = -Math.PI / 2 + d / radius;
+    x = leg / 2 + Math.cos(a) * radius;
+    z = Math.sin(a) * radius;
+    h = a + Math.PI / 2;
+  } else if ((d -= arc) < leg) {
+    x = leg / 2 - d;
+    z = radius;
+    h = Math.PI;
+  } else {
+    d -= leg;
+    const a = Math.PI / 2 + d / radius;
+    x = -leg / 2 + Math.cos(a) * radius;
+    z = Math.sin(a) * radius;
+    h = a + Math.PI / 2;
+  }
+  p.x = p.holdCenter.x + x;
+  p.z = p.holdCenter.z + z;
+  p.heading = h;
+  p.bank = Math.sin(h) === 0 ? 0 : -0.18;
+}
 export const SEPARATION = { horizontal: 450, vertical: 90 };
 export const FINISHED = new Set([
   "landed",
@@ -10,7 +53,17 @@ export const FINISHED = new Set([
   "diverted",
   "cancelled",
 ]);
-const GROUND = new Set(["holding-short", "taxiing", "lineup", "rollout"]);
+const GROUND = new Set([
+  "at-gate",
+  "pushback",
+  "await-taxi",
+  "taxiing",
+  "await-tower",
+  "holding-short",
+  "entering-runway",
+  "lineup",
+  "rollout",
+]);
 export function separationConflict(a, b) {
   return (
     !FINISHED.has(a.state) &&
@@ -96,38 +149,119 @@ export class Simulation {
         z: 710,
       });
     } else {
+      for (let i = 1; i < this.planes.length; i++)
+        this.placeInHold(this.planes[i], i - 1);
       this.spawnDeparture("27R");
       this.spawnDeparture("27L");
+      this.spawnDeparture("27R");
+      this.spawnDeparture("27L");
+      // The shift opens with traffic already at different operational stages.
+      const deps = this.planes.filter((p) => p.kind === "departure");
+      const ready = deps[0],
+        taxi = deps[1];
+      const hold = groundLayout.holds[ready.runway].position;
+      Object.assign(ready, {
+        x: hold[0],
+        z: hold[1],
+        state: "await-tower",
+        controller: "GROUND",
+        heading: Math.PI,
+      });
+      const path = taxi.taxiRoute;
+      taxi.route = path.slice(Math.max(0, path.length - 18));
+      taxi.x = taxi.route[0].x;
+      taxi.z = taxi.route[0].z;
+      taxi.state = "taxiing";
+      taxi.speed = 7;
+      taxi.heading = Math.atan2(
+        taxi.route[1].z - taxi.z,
+        taxi.route[1].x - taxi.x,
+      );
     }
   }
   spawnDeparture(runway) {
+    const busy = new Set(
+      this.planes
+        .filter((p) => p.kind === "departure" && !FINISHED.has(p.state))
+        .map((p) => p.stand),
+    );
+    const gates = groundLayout.gates;
+    const gate = gates
+      .slice(this.serial % gates.length)
+      .concat(gates.slice(0, this.serial % gates.length))
+      .find((g) => !busy.has(g.stand));
+    if (!gate) return null;
     const i = this.serial++,
-      t = templates[i % templates.length],
-      r = RUNWAYS[runway];
-    const holdZ = r.z + (r.z < 0 ? 105 : -105);
-    let holdX = r.threshold + 100;
-    while (
-      this.planes.some(
-        (p) =>
-          !FINISHED.has(p.state) &&
-          p.y < 20 &&
-          Math.hypot(p.x - holdX, p.z - holdZ) < 95,
-      )
-    )
-      holdX += 100;
+      t = templates[i % templates.length];
+    const waypoints = (points) => points.map(([x, z]) => ({ x, y: 5, z }));
     const p = {
       ...flight(t, t[0].replace(/\d+/, String(600 + i))),
       kind: "departure",
       destination: t[1],
       runway,
-      x: holdX,
+      stand: gate.stand,
+      holdingPoint: groundLayout.holds[runway].name,
+      controller: "GROUND",
+      x: gate.position[0],
       y: 5,
-      z: holdZ,
+      z: gate.position[1],
+      heading: gate.heading,
       speed: 0,
-      state: "holding-short",
+      state: "at-gate",
+      pushRoute: waypoints(gate.pushback),
+      taxiRoute: waypoints(gate.routes[runway]),
+      entryRoute: waypoints(groundLayout.holds[runway].entry),
+      handedOff: false,
     };
     this.planes.push(p);
     return p;
+  }
+  pushback(p) {
+    if (!p || this.over || p.state !== "at-gate") return false;
+    if (
+      this.planes.some(
+        (q) =>
+          q !== p &&
+          ["taxiing", "pushback"].includes(q.state) &&
+          Math.hypot(q.x - p.x, q.z - p.z) < 95,
+      )
+    ) {
+      this.events.push(
+        `${p.id}, stand ${p.stand}, pushback blocked by ground traffic.`,
+      );
+      return false;
+    }
+    p.route = p.pushRoute.slice(1).map((q) => ({ ...q }));
+    p.state = "pushback";
+    this.events.push(`Ground: ${p.id}, stand ${p.stand}, pushback approved.`);
+    return true;
+  }
+  taxi(p) {
+    if (!p || this.over || p.state !== "await-taxi") return false;
+    p.route = p.taxiRoute.map((q) => ({ ...q }));
+    p.state = "taxiing";
+    this.events.push(
+      `Ground: ${p.id}, taxi via the assigned route. Hold short ${p.holdingPoint}, runway ${p.runway}.`,
+    );
+    return true;
+  }
+  handoff(p) {
+    if (!p || this.over) return false;
+    if (p.state === "await-tower") {
+      p.state = "holding-short";
+      p.controller = "TOWER";
+      this.events.push(
+        `Tower: ${p.id}, handover accepted. Hold short runway ${p.runway}.`,
+      );
+      return true;
+    }
+    if (p.state === "departure" && p.y >= 250 && !p.handedOff) {
+      p.handedOff = true;
+      p.controller = "DEPARTURE";
+      this.events.push(`${p.id}, contact London Departure. Good flight.`);
+      return true;
+    }
+    return false;
   }
   runwayTraffic(id, except) {
     const r = RUNWAYS[id];
@@ -136,7 +270,9 @@ export class Simulation {
         p !== except &&
         p.runway === id &&
         !FINISHED.has(p.state) &&
-        (["lineup", "takeoff", "rollout"].includes(p.state) ||
+        (["entering-runway", "lineup", "takeoff", "rollout"].includes(
+          p.state,
+        ) ||
           (p.state === "departure" && p.y < 90) ||
           (p.state === "approach" && p.x < r.threshold + 1600 && p.y < 150)),
     );
@@ -144,18 +280,16 @@ export class Simulation {
   clear(p, id) {
     if (!p || this.over || FINISHED.has(p.state) || !RUNWAYS[id]) return false;
     if (p.kind === "departure") {
-      if (p.state !== "holding-short") return false;
-      const r = RUNWAYS[id];
-      p.runway = id;
-      p.state = "taxiing";
-      // Eastern perimeter taxi route, then enter at the threshold.
-      p.route = [
-        { x: 2110, y: 5, z: p.z },
-        { x: 2110, y: 5, z: r.z },
-        { x: r.threshold - 50, y: 5, z: r.z },
-      ];
+      if (
+        p.state !== "holding-short" ||
+        p.controller !== "TOWER" ||
+        id !== p.runway
+      )
+        return false;
+      p.route = p.entryRoute.map((q) => ({ ...q }));
+      p.state = "entering-runway";
       this.events.push(
-        `${p.id}, runway ${id}, cleared for takeoff.${this.runwayTraffic(id, p).length ? " WARNING: conflicting runway traffic." : ""}`,
+        `Tower: ${p.id}, runway ${id}, cleared for takeoff.${this.runwayTraffic(id, p).length ? " WARNING: conflicting runway traffic." : ""}`,
       );
       return true;
     }
@@ -168,12 +302,29 @@ export class Simulation {
     )
       points.shift();
     p.route = [...(p.state === "vectoring" ? p.route : []), ...points];
+    p.routeStart ??= { x: p.x, y: p.y, z: p.z };
     p.state = "approach";
+    p.holdName = null;
+    p.controller = "TOWER";
     p.runway = id;
     this.events.push(
       `${p.id}, cleared to land runway ${id}.${this.runwayTraffic(id, p).length ? " WARNING: conflicting runway traffic." : ""}`,
     );
     return true;
+  }
+  placeInHold(p, index) {
+    p.holdCenter = HOLDING_AREAS[index % 4];
+    p.holdName = p.holdCenter.name;
+    const same = this.planes.filter(
+      (q) => q !== p && q.holdName === p.holdName && !FINISHED.has(q.state),
+    ).length;
+    p.y = 1200 + same * 320;
+    p.speed = 105;
+    p.holdDistance = 0;
+    p.state = "holding";
+    p.runway = null;
+    p.route = [];
+    racetrack(p);
   }
   hold(p) {
     if (
@@ -184,19 +335,29 @@ export class Simulation {
     )
       return false;
     if (p.kind === "departure") {
-      if (p.state !== "holding-short") return false;
+      if (!["holding-short", "await-tower"].includes(p.state)) return false;
       this.events.push(`${p.id}, hold short runway ${p.runway}.`);
       return true;
     }
-    p.route = [];
+    const area = HOLDING_AREAS.reduce((a, b) =>
+      Math.hypot(a.x - p.x, a.z - p.z) < Math.hypot(b.x - p.x, b.z - p.z)
+        ? a
+        : b,
+    );
+    p.holdCenter = area;
+    p.holdName = area.name;
+    p.holdDistance = 0;
     p.runway = null;
-    p.state = "holding";
-    p.holdCenter = {
-      x: p.x - Math.cos(p.heading + Math.PI / 2) * 650,
-      z: p.z - Math.sin(p.heading + Math.PI / 2) * 650,
-    };
-    p.holdPhase = Math.atan2(p.z - p.holdCenter.z, p.x - p.holdCenter.x);
-    this.events.push(`${p.id}, hold present position.`);
+    p.state = "to-hold";
+    const others = this.planes.filter(
+      (q) => q !== p && q.holdName === area.name && !FINISHED.has(q.state),
+    ).length;
+    const altitude = Math.max(1200, p.y, 1200 + others * 320);
+    p.route = [{ x: area.x - 800, y: altitude, z: area.z - 700 }];
+    p.routeStart = { x: p.x, y: p.y, z: p.z };
+    this.events.push(
+      `${p.id}, proceed to ${area.name} hold. Climb ${Math.round((altitude * 3.281) / 100) * 100} feet.`,
+    );
     return true;
   }
   goAround(p) {
@@ -213,6 +374,8 @@ export class Simulation {
       { x: p.x - 2000, y: 700, z: p.z - 1800 },
     ];
     p.state = "go-around";
+    p.holdName = null;
+    p.routeStart = { x: p.x, y: p.y, z: p.z };
     p.runway = null;
     this.events.push(`${p.id}, go around. Climb and maintain 2,300 feet.`);
     return true;
@@ -228,7 +391,11 @@ export class Simulation {
     )
       return false;
     p.route = points.map((v) => ({ x: v.x, y: Math.max(p.y, 300), z: v.z }));
+    p.route = p.route.map((q) => ({ ...q, kind: "vector" }));
+    p.routeStart = { x: p.x, y: p.y, z: p.z };
     p.state = "vectoring";
+    p.holdName = null;
+    p.controller = "APPROACH";
     p.runway = null;
     return true;
   }
@@ -251,23 +418,70 @@ export class Simulation {
   }
   moveDeparture(p, dt) {
     p.bank = 0;
-    if (p.state === "holding-short") return;
-    if (p.state === "taxiing") {
-      const q = p.route[0],
-        dx = q.x - p.x,
+    if (
+      ["at-gate", "await-taxi", "await-tower", "holding-short"].includes(
+        p.state,
+      )
+    )
+      return;
+    if (["pushback", "taxiing", "entering-runway"].includes(p.state)) {
+      const q = p.route[0];
+      if (!q) return;
+      const dx = q.x - p.x,
         dz = q.z - p.z,
         d = Math.hypot(dx, dz);
-      p.speed = 12;
-      p.heading = Math.atan2(dz, dx);
-      if (d <= p.speed * dt) {
+      const movingHeading = Math.atan2(dz, dx);
+      // Ground control meters traffic on shared taxiways; no teleporting or overtaking.
+      p.groundBlocked =
+        p.state !== "entering-runway" &&
+        this.planes.some((other) => {
+          if (
+            other === p ||
+            !GROUND.has(other.state) ||
+            other.state === "at-gate"
+          )
+            return false;
+          const distance = Math.hypot(other.x - p.x, other.z - p.z);
+          const ahead =
+            (other.x - p.x) * Math.cos(movingHeading) +
+            (other.z - p.z) * Math.sin(movingHeading);
+          return distance < 85 && ahead > 5;
+        });
+      if (p.groundBlocked) {
+        p.speed = 0;
+        return;
+      }
+      const reversing = p.state === "pushback";
+      p.speed = reversing ? 3 : p.state === "entering-runway" ? 7 : 9;
+      if (!reversing) {
+        const diff = Math.atan2(
+          Math.sin(movingHeading - p.heading),
+          Math.cos(movingHeading - p.heading),
+        );
+        p.heading += Math.max(-0.45 * dt, Math.min(0.45 * dt, diff));
+        if (Math.abs(diff) > 0.4) p.speed = 4;
+      }
+      if (d <= p.speed * dt + 0.05) {
         p.x = q.x;
         p.z = q.z;
         p.route.shift();
         if (!p.route.length) {
-          p.state = "lineup";
-          p.lineupTime = 4;
-          p.heading = Math.PI;
           p.speed = 0;
+          if (p.state === "pushback") {
+            p.state = "await-taxi";
+            this.events.push(
+              `Ground: ${p.id}, pushback complete. Request taxi clearance.`,
+            );
+          } else if (p.state === "taxiing") {
+            p.state = "await-tower";
+            this.events.push(
+              `Ground → Tower: ${p.id} holding at ${p.holdingPoint}. Ready for handover.`,
+            );
+          } else {
+            p.state = "lineup";
+            p.lineupTime = 3;
+            p.heading = Math.PI;
+          }
         }
       } else {
         p.x += (dx / d) * p.speed * dt;
@@ -288,11 +502,22 @@ export class Simulation {
         p.pitch = 0.1;
       }
       if (p.y > 12) p.state = "departure";
+      if (p.y >= 250 && !p.handoffRequested) {
+        p.handoffRequested = true;
+        this.events.push(
+          `Tower: ${p.id} climbing out. Transfer to London Departure.`,
+        );
+      }
       if (p.x < -6500) {
         this.finish(p, "departed");
         this.departed++;
-        this.score += 100;
-        this.events.push(`+100 · ${p.id} handed to London Departure.`);
+        if (p.handedOff) {
+          this.score += 100;
+          this.events.push(`+100 · ${p.id} safely handed to London Departure.`);
+        } else
+          this.strike(
+            `${p.id} left tower airspace without a departure handover.`,
+          );
       }
     }
   }
@@ -304,10 +529,8 @@ export class Simulation {
       p.age += dt;
       if (
         !this.demo &&
-        p.age > (p.kind === "departure" ? 360 : 480) &&
-        (p.kind === "departure"
-          ? p.state === "holding-short"
-          : p.state !== "rollout")
+        p.age > (p.kind === "departure" ? 900 : 480) &&
+        (p.kind === "departure" ? GROUND.has(p.state) : p.state !== "rollout")
       ) {
         this.finish(p, p.kind === "departure" ? "cancelled" : "diverted");
         this.strike(
@@ -320,9 +543,38 @@ export class Simulation {
         continue;
       }
       if (p.route.length) {
-        const q = p.route[0],
-          dist = Math.hypot(q.x - p.x, q.z - p.z),
-          target = Math.atan2(q.z - p.z, q.x - p.x);
+        const q = p.route[0];
+        const dist = Math.hypot(q.x - p.x, q.z - p.z);
+        const start = p.routeStart || { x: p.x, z: p.z };
+        const sx = q.x - start.x,
+          sz = q.z - start.z,
+          segmentLength = Math.hypot(sx, sz);
+        const projection = segmentLength
+          ? ((p.x - start.x) * sx + (p.z - start.z) * sz) /
+            (segmentLength * segmentLength)
+          : 0;
+        let carrot = q;
+        if (q.kind === "vector") {
+          let remaining = 500;
+          let from = {
+            x: start.x + sx * Math.max(0, Math.min(1, projection)),
+            z: start.z + sz * Math.max(0, Math.min(1, projection)),
+          };
+          for (const point of p.route) {
+            const length = Math.hypot(point.x - from.x, point.z - from.z);
+            if (length >= remaining) {
+              carrot = {
+                x: from.x + ((point.x - from.x) * remaining) / length,
+                z: from.z + ((point.z - from.z) * remaining) / length,
+              };
+              break;
+            }
+            remaining -= length;
+            carrot = point;
+            from = point;
+          }
+        }
+        const target = Math.atan2(carrot.z - p.z, carrot.x - p.x);
         const diff = Math.atan2(
           Math.sin(target - p.heading),
           Math.cos(target - p.heading),
@@ -337,7 +589,12 @@ export class Simulation {
               ? 70
               : 90;
         p.speed = speed;
-        if (dist < Math.max(95, speed * dt * 1.8)) {
+        const reached =
+          q.kind === "vector"
+            ? dist < 180 || (projection >= 1 && dist < 700)
+            : dist < (q.y === 7 || p.state === "rollout" ? 95 : 220);
+        if (reached) {
+          p.routeStart = { ...q };
           p.route.shift();
           if (p.state === "approach" && q.y === 7) {
             p.state = "rollout";
@@ -350,6 +607,11 @@ export class Simulation {
               this.landed++;
               this.score += 100;
               this.events.push(`+100 · ${p.id} safely on stand.`);
+            } else if (p.state === "to-hold") {
+              p.state = "holding";
+              p.y = q.y;
+              p.holdDistance = 0;
+              racetrack(p);
             } else this.hold(p);
           }
         } else {
@@ -361,11 +623,8 @@ export class Simulation {
           );
         }
       } else if (p.state === "holding") {
-        p.holdPhase += (dt * p.speed) / 650;
-        p.x = p.holdCenter.x + Math.cos(p.holdPhase) * 650;
-        p.z = p.holdCenter.z + Math.sin(p.holdPhase) * 650;
-        p.heading = p.holdPhase + Math.PI / 2;
-        p.bank = -0.25;
+        p.holdDistance = (p.holdDistance || 0) + dt * p.speed;
+        racetrack(p);
       } else {
         p.x += Math.cos(p.heading) * p.speed * dt;
         p.z += Math.sin(p.heading) * p.speed * dt;
@@ -391,8 +650,8 @@ export class Simulation {
           vertical = Math.abs(a.y - b.y);
         if (
           !this.demo &&
-          a.state !== "holding-short" &&
-          b.state !== "holding-short" &&
+          !["at-gate", "await-taxi"].includes(a.state) &&
+          !["at-gate", "await-taxi"].includes(b.state) &&
           distance < 55 &&
           vertical < 18
         ) {
@@ -417,10 +676,10 @@ export class Simulation {
         }
         const incurs =
           (a.kind === "departure" &&
-            ["lineup", "takeoff"].includes(a.state) &&
+            ["entering-runway", "lineup", "takeoff"].includes(a.state) &&
             this.runwayTraffic(a.runway, a).includes(b)) ||
           (b.kind === "departure" &&
-            ["lineup", "takeoff"].includes(b.state) &&
+            ["entering-runway", "lineup", "takeoff"].includes(b.state) &&
             this.runwayTraffic(b.runway, b).includes(a));
         if (incurs) {
           runwayNow.add(key);
@@ -448,18 +707,21 @@ export class Simulation {
         speed: 80,
       };
       this.planes.push(p);
-      this.events.push(`${p.id} inbound from ${p.origin}.`);
+      if (!this.demo) this.placeInHold(p, i % 4);
+      this.events.push(
+        `${p.id} inbound from ${p.origin}, ${p.holdName || "on approach"}.`,
+      );
       if (this.demo) this.clear(p, i % 2 ? "27L" : "27R");
     }
     if (
       !this.demo &&
       this.time >= this.departureAt &&
-      active.filter((p) => p.kind === "departure").length < 4
+      active.filter((p) => p.kind === "departure").length < 8
     ) {
-      this.departureAt = this.time + 32;
+      this.departureAt = this.time + 65;
       const p = this.spawnDeparture(this.serial % 2 ? "27L" : "27R");
       this.events.push(
-        `${p.id} to ${p.destination}, ready at holding point ${p.runway}.`,
+        `${p.id} to ${p.destination}, requesting pushback at stand ${p.stand}.`,
       );
     }
     // Keep a short history without accumulating aircraft during an endless session.

@@ -34,12 +34,13 @@ try {
     4,
   );
   await p.click("#departure-tab");
-  assert.equal(await p.locator(".flight-row").count(), 2);
+  assert.equal(await p.locator(".flight-row").count(), 4);
   assert.match(
     await p.locator("#command-hint").textContent(),
-    /To Los Angeles/,
+    /tower handover/i,
   );
   assert.equal(await p.locator("#go-around").isDisabled(), true);
+  await p.click("#ground-action");
   assert.match(
     await p.locator('[data-runway="27R"] b').textContent(),
     /TAKEOFF/,
@@ -54,14 +55,18 @@ try {
         window.__HEATHROW__.sim.planes.find((p) => p.kind === "departure")
           .state,
     ),
-    "taxiing",
+    "entering-runway",
   );
   await p.evaluate(() => {
     const a = window.__HEATHROW__,
       d = a.sim.planes.find((p) => p.kind === "departure");
     a.sim.planes = [d];
     a.sim.spawnAt = a.sim.departureAt = Infinity;
-    for (let i = 0; i < 1500; i++) a.sim.tick(0.1);
+    for (let i = 0; i < 1800; i++) {
+      a.sim.tick(0.1);
+      if (d.state === "departure" && d.y >= 250 && !d.handedOff)
+        a.sim.handoff(d);
+    }
     a.step(0.4);
   });
   assert.equal(await p.locator("#departed").textContent(), "01");
@@ -89,6 +94,7 @@ try {
     await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     true,
   );
+  await p.click("#ground-action");
   const bounds = await p.locator('[data-runway="27R"]').boundingBox();
   assert.ok(
     bounds.x >= 0 &&
@@ -102,7 +108,7 @@ try {
         window.__HEATHROW__.sim.planes.find((p) => p.kind === "departure")
           .state,
     ),
-    "taxiing",
+    "entering-runway",
   );
   await p.click("#restart");
   assert.equal(await p.evaluate(() => window.__HEATHROW__.sim.time), 0);

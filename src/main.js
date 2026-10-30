@@ -1,3 +1,4 @@
+import { createIncidentEffect } from "./incident-effects.js";
 import * as T from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { HDRLoader } from "three/addons/loaders/HDRLoader.js";
@@ -5,8 +6,8 @@ import { buildGeographicAirport } from "./geographic-airport.js";
 import { loadGeography, IMAGERY_CREDIT } from "./geography.js";
 import { loadMaterials, materialState } from "./materials.js";
 import { createPostProcessing } from "./postprocessing.js";
-import { aircraft } from "./aircraft.js";
-import { Simulation, RUNWAYS, FINISHED } from "./simulation.js";
+import { aircraft, loadAirlineMarkings } from "./aircraft.js";
+import { Simulation, RUNWAYS, FINISHED, HOLDING_AREAS } from "./simulation.js";
 import "@fontsource-variable/dm-sans";
 import "@fontsource-variable/space-grotesk";
 import "./style.css";
@@ -51,7 +52,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.06;
 controls.maxPolarAngle = Math.PI / 2 - 0.025;
 controls.minDistance = 70;
-controls.maxDistance = 13000;
+controls.maxDistance = 38000;
 controls.maxTargetRadius = 9000;
 const hemi = new T.HemisphereLight(0xb1d4ef, 0x514430, 1.1);
 scene.add(hemi);
@@ -107,7 +108,7 @@ const atmosphere = new T.Mesh(
 scene.add(atmosphere);
 $("#loading-detail").textContent =
   "Loading surface materials and satellite imagery…";
-await loadMaterials();
+await Promise.all([loadMaterials(), loadAirlineMarkings()]);
 const geography = await loadGeography();
 $("#loading-detail").textContent = "Opening the tower…";
 const airport = buildGeographicAirport(scene, geography);
@@ -141,6 +142,50 @@ const models = new Map(),
   labels = new Map();
 const routeGroup = new T.Group();
 scene.add(routeGroup);
+// A chart overlay keeps the off-airport stacks legible at radar scale.
+const holdChart = new T.Group();
+const holdMaterial = new T.LineDashedMaterial({
+  color: 0xb6d7c8,
+  dashSize: 160,
+  gapSize: 100,
+  transparent: true,
+  opacity: 0.65,
+  depthTest: false,
+  fog: false,
+});
+for (const area of HOLDING_AREAS) {
+  const points = [];
+  for (let i = 0; i <= 32; i++) {
+    const a = -Math.PI / 2 + (i / 32) * Math.PI;
+    points.push(
+      new T.Vector3(
+        area.x + 800 + Math.cos(a) * 700,
+        100,
+        area.z + Math.sin(a) * 700,
+      ),
+    );
+  }
+  for (let i = 0; i <= 32; i++) {
+    const a = Math.PI / 2 + (i / 32) * Math.PI;
+    points.push(
+      new T.Vector3(
+        area.x - 800 + Math.cos(a) * 700,
+        100,
+        area.z + Math.sin(a) * 700,
+      ),
+    );
+  }
+  points.push(points[0]);
+  const line = new T.Line(
+    new T.BufferGeometry().setFromPoints(points),
+    holdMaterial,
+  );
+  line.computeLineDistances();
+  line.renderOrder = 10;
+  holdChart.add(line);
+}
+holdChart.visible = false;
+scene.add(holdChart);
 const routeMat = new T.LineBasicMaterial({
   color: 0xc5edb6,
   transparent: true,
@@ -223,7 +268,7 @@ function start(reset = true) {
   $("#command").classList.remove("hidden");
   $("#tip").classList.remove("hidden");
   $("#mode-label").textContent = "YOU HAVE CONTROL";
-  toast("Heathrow tower: arrivals and departures are on your frequency.");
+  toast("Heathrow control: arrivals, ground and tower are on your desk.");
   $("#shift-report").classList.add("hidden");
   clearIncident();
   updateUI();
@@ -236,6 +281,8 @@ function clearModels() {
 }
 function setView(v) {
   view = v;
+  scene.fog.density = v === "radar" ? 0.000008 : 0.000095;
+  holdChart.visible = v === "radar";
   controls.enabled = !cinematic;
   drawing = false;
   document.body.classList.remove("drawing");
@@ -248,8 +295,8 @@ function setView(v) {
     controls.target.set(-160, 0, -130);
   }
   if (v === "radar") {
-    camera.position.set(1000, 10500, 1);
-    controls.target.set(1000, 0, 0);
+    camera.position.set(0, 30000, 1);
+    controls.target.set(0, 0, 0);
   }
   if (v === "tower") {
     camera.position.copy(airport.tower).add(new T.Vector3(0, 4, 0));
@@ -333,6 +380,8 @@ const filmDuration = shots.reduce((a, s) => a + s.duration, 0);
 function enterFilm() {
   previousDay = day;
   cinematic = true;
+  scene.fog.density = 0.000095;
+  holdChart.visible = false;
   redrawRoutes();
   cinemaTime = 0;
   sim.reset(true);
@@ -408,8 +457,8 @@ function updateModels(dt) {
     active.add(p.id);
     let m = models.get(p.id);
     if (!m) {
-      m = aircraft(p.airline, p.type === "A388");
-      if (p.type === "A320") m.scale.multiplyScalar(0.67);
+      m = aircraft(p.airline, p.type);
+
       scene.add(m);
       models.set(p.id, m);
       const label = document.createElement("button");
@@ -418,9 +467,9 @@ function updateModels(dt) {
       $("#labels").append(label);
       labels.set(p.id, label);
     }
-    m.position.set(p.x, p.y, p.z);
+    m.position.set(p.x, p.y + (m.userData.groundHeight || 5) - 5, p.z);
     m.rotation.set(0, -p.heading, 0);
-    m.rotateX(p.state === "crashed" ? 1.2 : p.bank || 0);
+    m.rotateX(p.state === "crashed" ? 0.22 : p.bank || 0);
     m.rotateZ(p.pitch || 0);
     const gear = m.getObjectByName("gear");
     if (gear) gear.visible = p.y < 110;
@@ -439,7 +488,7 @@ function updateModels(dt) {
     label.style.left = (projected.x * 0.5 + 0.5) * innerWidth + "px";
     label.style.top = (-projected.y * 0.5 + 0.5) * innerHeight + "px";
     label.classList.toggle("selected", p.id === selectedId);
-    label.innerHTML = `${p.id}<small>${Math.round((p.y * 3.281) / 100) * 100} FT · ${p.runway || "INBOUND"}</small>`;
+    label.innerHTML = `${p.id}<small>${Math.round((p.y * 3.281) / 100) * 100} FT · ${p.kind === "departure" ? p.controller : p.holdName || p.runway || "INBOUND"}</small>`;
   }
   for (const [id, m] of models)
     if (!active.has(id)) {
@@ -507,8 +556,10 @@ function updateUI() {
             ? "HOLD SHORT"
             : p.state === "approach"
               ? `ILS ${p.runway}`
-              : p.state.replaceAll("-", " ").toUpperCase();
-        return `<button class="flight-row ${p.id === selectedId ? "selected" : ""}" data-flight="${p.id}"><span class="airline-mark" title="${AIRLINES[p.airline]}"><img src="/assets/airlines/${p.airline}.png" alt="${AIRLINES[p.airline]}" width="32" height="32"></span><span class="flight-info"><b>${p.id}</b><small>${p.kind === "departure" ? "To " : ""}${p.origin} · ${p.type}</small></span><span class="flight-data">${p.y < 15 ? p.runway || "GROUND" : Math.round((p.y * 3.281) / 100) * 100}<small class="${alert ? "alert" : ""}">${alert ? "CONFLICT" : status}</small></span></button>`;
+              : p.groundBlocked
+                ? "GIVE WAY"
+                : p.state.replaceAll("-", " ").toUpperCase();
+        return `<button class="flight-row ${p.id === selectedId ? "selected" : ""}" data-flight="${p.id}"><span class="airline-mark" title="${AIRLINES[p.airline]}"><img src="/assets/airlines/${p.airline}.png" alt="${AIRLINES[p.airline]}" width="32" height="32"></span><span class="flight-info"><b>${p.id}</b><small>${p.kind === "departure" ? "To " : ""}${p.origin} · ${p.kind === "departure" ? `STAND ${p.stand}` : p.holdName || p.type}</small></span><span class="flight-data">${p.y < 15 ? p.runway || "GROUND" : Math.round((p.y * 3.281) / 100) * 100}<small class="${alert ? "alert" : ""}">${alert ? "CONFLICT" : status}</small></span></button>`;
       })
       .join("") || '<p class="traffic-empty">Next flight is on its way.</p>';
   $$("[data-flight]").forEach(
@@ -534,6 +585,14 @@ function updateUI() {
   $("#command").classList.toggle("hidden", !playing || !p || sim.over);
   if (p) {
     const departure = p.kind === "departure";
+    $(".runway-buttons").classList.toggle(
+      "hidden",
+      departure &&
+        !["holding-short", "entering-runway", "lineup", "takeoff"].includes(
+          p.state,
+        ),
+    );
+    $(".command-extra").classList.toggle("hidden", departure);
     const controllable =
       !sim.over &&
       (departure
@@ -544,18 +603,46 @@ function updateUI() {
     $("#selected-logo").alt = AIRLINES[p.airline];
     $("#selected-type").textContent =
       `${departure ? "DEP" : "ARR"} · ${p.type}`;
+    const groundAction =
+      {
+        "at-gate": ["pushback", "Approve pushback"],
+        "await-taxi": ["taxi", "Issue taxi clearance"],
+        "await-tower": ["handoff", "Accept tower handover"],
+      }[p.state] ||
+      (departure && p.state === "departure" && p.y >= 250 && !p.handedOff
+        ? ["handoff", "Handoff to London Departure"]
+        : null);
+    $("#ground-action").classList.toggle("hidden", !groundAction);
+    if (groundAction) {
+      $("#ground-action").dataset.action = groundAction[0];
+      $("#ground-action").textContent = groundAction[1];
+    }
+    $("#controller-channel").textContent = departure
+      ? `${p.controller} · ${p.controller === "GROUND" ? `STAND ${p.stand} → ${p.holdingPoint}` : p.controller === "TOWER" ? `RUNWAY ${p.runway}` : "CLIMB-OUT"}`
+      : `${p.controller || "APPROACH"} · ${p.holdName || "HEATHROW ARRIVALS"}`;
     $("#command-hint").textContent = departure
-      ? p.state === "holding-short"
-        ? `To ${p.destination}. Check the runway before releasing.`
-        : `${p.state.replaceAll("-", " ").toUpperCase()} · ${p.runway} · ${Math.round(p.speed * 1.944)} KT`
+      ? {
+          "at-gate": `To ${p.destination}. Requesting pushback from stand ${p.stand}.`,
+          pushback: "Tug pushing back along the stand lead-in.",
+          "await-taxi": `Pushback complete. Assign the ground route to ${p.holdingPoint}.`,
+          taxiing: p.groundBlocked
+            ? "Holding for ground traffic ahead."
+            : `Following mapped taxiways to ${p.holdingPoint} · ${Math.round(p.speed * 1.944)} KT`,
+          "await-tower": `Holding short ${p.holdingPoint}. Ground is transferring the flight to Tower.`,
+          "holding-short": `Tower has control. Check runway ${p.runway} and final before takeoff.`,
+        }[p.state] ||
+        `${p.state.toUpperCase()} · ${p.runway} · ${Math.round(p.speed * 1.944)} KT`
       : drawing
-        ? "Drag a route, then assign a runway."
+        ? "Drag from the selected aircraft toward your next fix. Release to assign."
         : p.runway
           ? `Cleared ${p.runway}. Keep the runway and final clear.`
-          : `Fuel reserve in ${Math.max(0, Math.ceil((480 - p.age) / 60))} sim min. Assign a runway or hold.`;
+          : p.state === "vectoring"
+            ? `Following your vector · ${p.route.length} route points remaining.`
+            : `${p.holdName || "Inbound"} · fuel reserve in ${Math.max(0, Math.ceil((480 - p.age) / 60))} sim min.`;
     $$("[data-runway]").forEach((b) => {
       const occupied = sim.runwayTraffic(b.dataset.runway, p).length;
-      b.disabled = !controllable;
+      b.disabled =
+        !controllable || (departure && b.dataset.runway !== p.runway);
       b.classList.toggle("occupied", !!occupied);
       b.querySelector("b").textContent = departure
         ? "CLEAR TAKEOFF"
@@ -594,7 +681,10 @@ function command(id) {
   if (sim.over) return;
   const p = selected();
   if (!p) return;
-  if (id === "hold") sim.hold(p);
+  if (id === "pushback") sim.pushback(p);
+  else if (id === "taxi") sim.taxi(p);
+  else if (id === "handoff") sim.handoff(p);
+  else if (id === "hold") sim.hold(p);
   else if (id === "go-around") sim.goAround(p);
   else {
     if (sim.runwayTraffic(id, p).length)
@@ -631,11 +721,22 @@ $$("[data-view]").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
 $$("[data-runway]").forEach(
   (b) => (b.onclick = () => command(b.dataset.runway)),
 );
+$("#ground-action").onclick = () => command($("#ground-action").dataset.action);
 $("#hold").onclick = () => command("hold");
 $("#go-around").onclick = () => command("go-around");
 $("#draw").onclick = () => {
   if (!playing) start();
+  const flight = selected();
+  if (!flight || flight.kind === "departure" || sim.over) return;
   setView("radar");
+  // Frame the selected flight and the airport together while drawing.
+  controls.target.set(flight.x * 0.4, 0, flight.z * 0.4);
+  camera.position.set(
+    flight.x * 0.4,
+    Math.max(13000, Math.hypot(flight.x, flight.z) * 2.2),
+    flight.z * 0.4 + 1,
+  );
+  controls.update();
   drawing = true;
   controls.enabled = false;
   document.body.classList.add("drawing");
@@ -675,8 +776,10 @@ function worldPoint(e) {
 canvas.addEventListener("pointerdown", (e) => {
   downPos = { x: e.clientX, y: e.clientY };
   if (drawing) {
+    e.preventDefault();
     pointerDown = true;
-    drawPoints = [];
+    const flight = selected();
+    drawPoints = flight ? [new T.Vector3(flight.x, 0, flight.z)] : [];
     canvas.setPointerCapture(e.pointerId);
     const p = worldPoint(e);
     if (p) drawPoints.push(p);
@@ -685,16 +788,27 @@ canvas.addEventListener("pointerdown", (e) => {
 canvas.addEventListener("pointermove", (e) => {
   if (pointerDown && drawing) {
     const p = worldPoint(e);
-    if (p && (!drawPoints.length || p.distanceTo(drawPoints.at(-1)) > 100))
+    if (p && (!drawPoints.length || p.distanceTo(drawPoints.at(-1)) > 180))
       drawPoints.push(p);
   }
+});
+canvas.addEventListener("pointercancel", () => {
+  pointerDown = false;
+  drawing = false;
+  drawPoints = [];
+  controls.enabled = true;
+  document.body.classList.remove("drawing");
+  updateUI();
 });
 canvas.addEventListener("pointerup", (e) => {
   if (pointerDown && drawing) {
     pointerDown = false;
     if (sim.vector(selected(), drawPoints)) {
-      toast("Vector assigned. Choose a runway to complete the arrival.");
+      toast(
+        "Route assigned. Aircraft is following your vector; assign a runway when ready.",
+      );
     }
+    redrawRoutes();
     drawing = false;
     controls.enabled = true;
     document.body.classList.remove("drawing");
@@ -740,49 +854,22 @@ window.addEventListener("resize", () => {
   post.resize(innerWidth, innerHeight);
 });
 renderer.info.autoReset = false;
-const incidentGroup = new T.Group();
-scene.add(incidentGroup);
+const incidentEffect = createIncidentEffect();
+scene.add(incidentEffect.group);
 let shownIncident = null;
 function clearIncident() {
   shownIncident = null;
-  for (const mesh of [...incidentGroup.children]) {
-    incidentGroup.remove(mesh);
-    mesh.geometry.dispose();
-    mesh.material.dispose();
-  }
+  incidentEffect.clear();
 }
 function updateIncident() {
   if (sim.incident && sim.incident !== shownIncident) {
-    clearIncident();
     shownIncident = sim.incident;
     selectedId = sim.incident.flights[0];
     setView("follow");
-    incidentGroup.position.set(sim.incident.x, sim.incident.y, sim.incident.z);
-    for (let i = 0; i < 22; i++) {
-      const smoke = i > 5;
-      const mesh = new T.Mesh(
-        new T.IcosahedronGeometry(smoke ? 17 + i : 14, 1),
-        new T.MeshBasicMaterial({
-          color: smoke ? 0x25282b : i % 2 ? 0xff5b0a : 0xffb334,
-          transparent: true,
-          opacity: smoke ? 0.65 : 0.9,
-          depthWrite: false,
-        }),
-      );
-      mesh.position.set(
-        Math.sin(i * 2.4) * i * 2,
-        i * 7,
-        Math.cos(i * 2.4) * i * 2,
-      );
-      incidentGroup.add(mesh);
-    }
+    incidentEffect.start(sim.incident, elapsed);
   }
-  incidentGroup.visible = !!sim.incident;
-  incidentGroup.children.forEach((m, i) => {
-    m.rotation.y = elapsed * 0.15 + i;
-    const pulse = 1 + Math.sin(elapsed * 3 + i) * 0.08;
-    m.scale.setScalar(pulse);
-  });
+  if (!sim.incident) incidentEffect.clear();
+  incidentEffect.update(elapsed);
 }
 function renderScene() {
   renderer.info.reset();

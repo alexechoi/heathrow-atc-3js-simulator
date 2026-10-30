@@ -24,10 +24,10 @@ No API keys, server, live flight feed, tracking or paid assets are required. Fon
 
 1. Select **Take control**. Select a flight in the traffic list or click its label in the sky.
 2. Clear **27R** (north) or **27L** (south). The aircraft joins a descending final approach and rolls out after touchdown.
-3. Use **Hold** to delay an arrival, or **Go around** to cancel a clearance and climb away.
+3. Use **Hold** to send an arrival to an external racetrack stack, or **Go around** to cancel a clearance and climb away. Radar shows the four stacks outside the airport.
 4. For Flight Control-style free routing, select **Draw route**, drag a vector path in the overhead view, then assign a runway to append its approach.
-5. Switch to **Departures**. Aircraft wait at the holding points until you clear a runway for takeoff. They taxi, line up, accelerate, rotate and climb out; a safe handoff earns 100 points. Amber runway buttons warn about traffic on the runway or short final. A clearance is your decision: warnings do not prevent unsafe releases.
-6. Arrivals replenish every 40 simulated seconds and departures every 32, subject to a workload cap of seven arrivals and four departures. Traffic continues for as long as you keep the shift safe. Aircraft cannot wait forever: an arrival diverts after eight simulated minutes; an uncleared departure cancels after six.
+5. Switch to **Departures**. Approve **pushback** at a stand, issue **taxi clearance**, and watch the aircraft follow mapped taxiways to A1 or N1. **Accept tower handover** at the holding point, then clear takeoff on the assigned runway. Once it climbs above 820 ft, **hand off to London Departure**. A safe departure earns 100 points. Amber runway buttons warn about traffic on the runway or short final. A clearance is your decision: warnings do not prevent unsafe releases.
+6. Arrivals replenish every 40 simulated seconds and departures every 65 (the first replenishment is after 32), subject to a workload cap of seven arrivals and eight departures. Traffic continues for as long as you keep the shift safe. Aircraft cannot wait forever: an arrival diverts after eight simulated minutes; a delayed ground departure cancels after fifteen.
 7. Each safe arrival or departure earns 100 points. Separation losses, conflicting runway use, diversions and cancellations cost a strike and 50 points. Three strikes end the shift. A mid-air or runway collision ends it immediately, with a visible incident and a shift report. Use **Try another shift** to restart.
 
 The first arrival is aligned with 27L and makes a good first landing. Avoid clearing nearby flights onto the same final. The alert monitor uses a deliberately compressed game threshold of **450 m horizontally and 90 m vertically**; this is not an operational separation standard. Runway selection is free-play, rather than Heathrow's actual segregated arrival/departure procedure.
@@ -52,12 +52,15 @@ The base game clock advances two simulated seconds per real second. Traffic, wea
 - The parallel 09L/27R and 09R/27L runways, approximately 3,902 m and 3,660 m long, separated by approximately 1,420 m.
 - Terminal 5's western main building and satellite concourses, the central Terminal 2/3 area, southern Terminal 4 and an 87 m tower, aligned with real geographic coordinates.
 - Curved metal roofs, glass curtain walls, jet bridges, stands, ramp vehicles, parking structures, apron slabs and wear, taxiway centrelines, runway thresholds, touchdown markings, skid marks and approach lights.
-- Procedural widebody airframes with tapered fuselages, swept wings, engines, fan details, windows, original geometric tail liveries, landing gear and navigation lights. The heavy variant adds four engines and an upper window row; the narrowbody is scaled. These are representative airframes, not manufacturer-exact models.
+- Five separately dimensioned procedural airframes: 787-9, A350-1000, A380-800, 777-300ER and A320. Curved fuselages and cockpit glazing, cambered wings, recessed engine fans, multi-axle landing gear, navigation lights and photo-referenced BA, Virgin, Emirates and Singapore paint with actual airline wordmarks. These are representative airframes, not manufacturer-exact models.
 - 764 mapped airfield features and 2,787 OpenStreetMap building footprints; mapped woodland, real satellite surroundings, and a shared local Web Mercator coordinate frame. Building heights use OSM where available and estimates elsewhere. It is not a surveyed digital twin.
 - Bundled CC0 photographic skies and asphalt/concrete/grass PBR textures; world-space material blending, roughness and normal maps, reflective glazing with procedural interior detail, brushed roof seams, HDR bloom, colour grading, MSAA, directional shadows and three lighting moods.
+- Departures use a connected graph of 417 OSM taxiway ways and 16 reserved stand lead-ins. Ground aircraft queue behind other traffic and stop before runway entry. The ground → tower → departure sequence is simplified for one player; there are no live radio frequencies.
+- Bovingdon, Lambourne, Biggin and Ockham-inspired external holding stacks, with racetrack movement and vertically separated levels. Their positions, dimensions and altitudes are geographically compressed for the game and are not navigation fixes.
+- Soft animated shader fire and wind-drifting smoke replace solid explosion meshes.
 - Five camera sequences: airport reveal, arrival chase, Terminal 5 flyby, tower view and closing orbit.
 
-This is a visual game, **not a flight dynamics or operational ATC trainer**. It does not implement real approach procedures, wake categories, real traffic or a full taxiway-routing controller. Heathrow, NATS and the airlines do not endorse this project.
+This is a visual game, **not a flight dynamics or operational ATC trainer**. It does not implement real approach procedures, wake categories, real traffic, airline-specific stand allocation or a full ground-control system. Heathrow, NATS and the airlines do not endorse this project.
 
 ## Validation and capture
 
@@ -65,6 +68,7 @@ This is a visual game, **not a flight dynamics or operational ATC trainer**. It 
 npm test                        # deterministic simulation tests
 node scripts/e2e.mjs            # Chromium desktop + mobile interaction checks
 node scripts/traffic-e2e.mjs    # airline logos, departures, collisions and restart
+node scripts/operations-e2e.mjs # gate-to-tower flow, mapped taxi, drawn vectors and external holds
 # In another terminal: npm run preview -- --port 4173
 npm run capture                 # 1280×720 / 24 fps / 30-second H.264 MP4
 ```
@@ -80,7 +84,9 @@ The in-browser reel includes a blue-hour tower sequence and is 42 seconds; the e
 - `src/geography.js` — coordinate reference and runtime satellite tiles.
 - `src/materials.js` / `src/postprocessing.js` — PBR surfaces, facade shaders and the HDR rendering pipeline.
 - `src/terminal-architecture.js` / `src/runway-markings.js` — photo-studied terminal profiles and metre-scaled vector paint.
-- `src/aircraft.js` — procedural airframes and liveries.
+- `src/aircraft.js` / `src/aircraft-liveries.js` — procedural airframes and textured liveries.
+- `src/incident-effects.js` — instanced fire, smoke and sparks.
+- `scripts/build-ground-routes.py` — reproducible OSM taxiway graph and stand routing.
 - `src/main.js` — renderer, interaction, cameras, radio and UI.
 - `tests/` and `scripts/` — repeatable tests and recording.
 - `docs/references.md` — photographic references and visual review notes.

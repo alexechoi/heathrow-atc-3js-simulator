@@ -14,7 +14,7 @@ Font licence copies are included in `public/assets/licenses/`.
 
 The Wikimedia / Geograph photographs listed in `docs/references.md` were inspected during modelling. They are not embedded in the game or relicensed as Apache-2.0. Their creators and licences remain as described on their source pages.
 
-Aircraft airline names are descriptive. Geometric liveries and airframes are original simplified models, not official airline artwork. No association or endorsement is implied.
+Airframes are original simplified models. Airline artwork and names identify the represented operators; no association or endorsement is implied.
 
 ## Inspiration
 
@@ -32,7 +32,7 @@ The following original 1K JPG diffuse, OpenGL normal and roughness maps are bund
 
 ## Geographic data and imagery
 
-- `public/data/heathrow.json`: derived from **© OpenStreetMap contributors**, **ODbL 1.0**. <https://www.openstreetmap.org/copyright>. Contains selected Heathrow building footprints, airfield ways, roads and woodland, transformed into local coordinates and simplified for rendering. The derived database is offered under ODbL; original application code remains Apache-2.0. Source way IDs are retained. Data retrieved 30 October 2026.
+- `public/data/heathrow.json` and `public/data/heathrow-ground.json`: derived from **© OpenStreetMap contributors**, **ODbL 1.0**. <https://www.openstreetmap.org/copyright>. Contains selected Heathrow building footprints, airfield ways, roads and woodland, transformed into local coordinates and simplified for rendering. The derived database is offered under ODbL; original application code remains Apache-2.0. Source way IDs are retained. Data retrieved 30 October 2026.
 - **Esri World Imagery**, streamed at runtime: **Esri, Vantor, Earthstar Geographics, and the GIS User Community**. <https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer>. Satellite imagery is not bundled or relicensed as open-source art. Provider terms apply. Attribution remains visible in the app and exported footage. Imagery may be historical and is not a live airport feed.
 - [Slop New York](https://github.com/mrdoob/slop-newyork/), mrdoob and contributors: reference for layered procedural materials, HDR grading, bloom and geographic scene construction. No source code was copied into this project's original shaders.
 
@@ -41,3 +41,16 @@ The following original 1K JPG diffuse, OpenGL normal and roughness maps are bund
 ## Airline identification
 
 `public/assets/airlines/{BA,VS,EK,SQ}.png`: British Airways, Virgin Atlantic, Emirates and Singapore Airlines logos, retrieved from `https://images.kiwi.com/airlines/64/{code}.png` for traffic identification. Airline artwork and trademarks belong to their respective owners and are excluded from the application’s Apache-2.0 licence. No endorsement is implied.
+
+## Aircraft livery artwork
+
+The following SVGs are bundled in `public/assets/liveries/` and used as wordmarks or fin markings, with cropping and recolouring. They remain airline artwork/trademarks and are **excluded from Apache-2.0**. The source pages describe their copyright status; public-domain logo artwork can still carry trademark restrictions.
+
+- `ba-logo.svg`: [British Airways logo](https://commons.wikimedia.org/wiki/File:BRITISH_AIRWAYS_logo.svg).
+- `vs-logo.svg`: [Virgin Atlantic logo, 2018](https://commons.wikimedia.org/wiki/File:Virgin_Atlantic_logo_2018.svg).
+- `virgin-mark.svg`: [Virgin logo](https://commons.wikimedia.org/wiki/File:Virgin-logo.svg).
+- `ek-logo.svg`: [Emirates logo](https://commons.wikimedia.org/wiki/File:Emirates_logo.svg).
+- `sq-logo.svg`: [Singapore Airlines wordmark](https://commons.wikimedia.org/wiki/File:Singapore_Airlines_Logo.svg).
+- `sq-bird.svg`: [Singapore Airlines logo with bird](https://en.wikipedia.org/wiki/File:Singapore_Airlines_Logo_2.svg), airline identification artwork hosted on English Wikipedia.
+
+BA tail ribbons and Emirates flag paint are simplified original drawings referenced against photographs; they are not official livery files.

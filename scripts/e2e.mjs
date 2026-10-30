@@ -47,7 +47,7 @@ assert.equal(
 await page.click("#hold");
 assert.equal(
   await page.evaluate(() => window.__HEATHROW__.sim.planes[0].state),
-  "holding",
+  "to-hold",
 );
 await page.click("#go-around");
 assert.equal(

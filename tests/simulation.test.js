@@ -26,7 +26,7 @@ test("hold cancels clearance, go-around climbs and cancels runway", () => {
   s.clear(p, "27R");
   s.hold(p);
   assert.equal(p.runway, null);
-  assert.equal(p.state, "holding");
+  assert.equal(p.state, "to-hold");
   const y = p.y;
   s.goAround(p);
   advance(s, 12);
@@ -85,15 +85,23 @@ test("departure taxis, lines up, accelerates, climbs and scores once on handoff"
   const p = s.planes.find((p) => p.kind === "departure");
   s.planes = [p];
   s.spawnAt = s.departureAt = Infinity;
+  assert.equal(s.handoff(p), true);
   assert.equal(s.clear(p, "27R"), true);
-  assert.equal(p.state, "taxiing");
+  assert.equal(p.state, "entering-runway");
   assert.equal(s.clear(p, "27L"), false);
   const stages = new Set();
   for (let i = 0; i < 1500; i++) {
     s.tick(0.1);
+    if (p.state === "departure" && p.y >= 250) s.handoff(p);
     stages.add(p.state);
   }
-  for (const stage of ["taxiing", "lineup", "takeoff", "departure", "departed"])
+  for (const stage of [
+    "entering-runway",
+    "lineup",
+    "takeoff",
+    "departure",
+    "departed",
+  ])
     assert.ok(stages.has(stage), stage);
   assert.equal(s.departed, 1);
   assert.equal(s.score, 100);
@@ -108,7 +116,7 @@ test("uncleared departures stay behind the holding point", () => {
   s.spawnAt = s.departureAt = Infinity;
   const { x, z } = p;
   advance(s, 90);
-  assert.equal(p.state, "holding-short");
+  assert.equal(p.state, "await-tower");
   assert.equal(p.x, x);
   assert.equal(p.z, z);
   assert.equal(
@@ -135,9 +143,10 @@ test("runway occupancy warns on clearance and conflicting lineup costs a strike"
   });
   s.planes = [p, a];
   s.spawnAt = s.departureAt = Infinity;
+  s.handoff(p);
   assert.equal(s.clear(p, "27R"), true);
   assert.match(s.events.at(-1), /WARNING/);
-  advance(s, 43);
+  advance(s, 8);
   assert.equal(s.strikes, 1);
   assert.equal(s.over, false);
   assert.equal(s.runwayConflicts.size, 1);
@@ -185,7 +194,7 @@ test("continuous arrival and departure streams replenish for a long shift withou
     s.tick(1);
   }
   assert.ok(arrivals > 80);
-  assert.ok(departures > 100);
+  assert.ok(departures > 50);
   assert.equal(s.over, false);
   assert.ok(s.planes.length < 15);
   assert.ok(s.events.length <= 40);
@@ -195,10 +204,10 @@ test("ignored traffic eventually diverts or cancels and three delays lose the sh
   s.planes = s.planes.filter((p) => p.kind === "departure");
   s.spawnDeparture("27R");
   s.spawnAt = s.departureAt = Infinity;
-  advance(s, 361);
+  advance(s, 901);
   assert.equal(s.over, true);
   assert.equal(s.strikes, 3);
-  assert.ok(s.planes.every((p) => p.state === "cancelled"));
+  assert.ok(s.planes.filter((p) => p.state === "cancelled").length >= 3);
 });
 
 test("replacement departures use free holding slots, never an occupied one", () => {
@@ -211,5 +220,97 @@ test("replacement departures use free holding slots, never an occupied one", () 
   const replacement = s.spawnDeparture("27R");
   assert.ok(
     Math.hypot(second.x - replacement.x, second.z - replacement.z) >= 95,
+  );
+});
+
+test("a departure completes pushback, mapped taxi, ground/tower handover and departure handover", () => {
+  const s = new Simulation(),
+    p = s.planes.find((p) => p.state === "at-gate");
+  s.planes = [p];
+  s.spawnAt = s.departureAt = Infinity;
+  assert.equal(
+    s.clear(p, p.runway),
+    false,
+    "Cannot clear takeoff from the gate",
+  );
+  assert.equal(s.taxi(p), false, "Pushback first");
+  assert.equal(s.pushback(p), true);
+  advance(s, 120);
+  assert.equal(p.state, "await-taxi");
+  assert.equal(s.taxi(p), true);
+  const route = p.taxiRoute;
+  const distanceToRoute = (x, z) =>
+    Math.min(
+      ...route.slice(1).map((b, i) => {
+        const a = route[i],
+          dx = b.x - a.x,
+          dz = b.z - a.z,
+          t = Math.max(
+            0,
+            Math.min(
+              1,
+              ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz || 1),
+            ),
+          );
+        return Math.hypot(x - a.x - t * dx, z - a.z - t * dz);
+      }),
+    );
+  for (let i = 0; i < 6000 && p.state === "taxiing"; i++) {
+    s.tick(0.1);
+    assert.ok(
+      distanceToRoute(p.x, p.z) < 6.1,
+      "Aircraft stays on mapped taxiway segments",
+    );
+  }
+  assert.equal(p.state, "await-tower");
+  assert.equal(p.controller, "GROUND");
+  assert.equal(s.clear(p, p.runway), false);
+  assert.equal(s.handoff(p), true);
+  assert.equal(p.controller, "TOWER");
+  assert.equal(
+    s.clear(p, p.runway === "27R" ? "27L" : "27R"),
+    false,
+    "No teleporting to the other runway",
+  );
+  assert.equal(s.clear(p, p.runway), true);
+  for (let i = 0; i < 1800; i++) {
+    s.tick(0.1);
+    if (p.state === "departure" && p.y >= 250) s.handoff(p);
+  }
+  assert.equal(p.state, "departed");
+  assert.equal(p.controller, "DEPARTURE");
+  assert.equal(s.score, 100);
+  assert.equal(s.over, false);
+});
+test("all initial and replenished holding traffic stays outside the airport", () => {
+  const s = new Simulation();
+  s.planes = s.planes.filter((p) => p.state === "holding");
+  s.departureAt = Infinity;
+  for (let i = 0; i < 1200; i++) {
+    s.tick(0.1);
+    for (const p of s.planes)
+      if (p.state === "holding") assert.ok(Math.hypot(p.x, p.z) > 6500);
+  }
+  assert.ok(s.planes.length >= 6);
+  assert.equal(s.over, false);
+});
+test("a drawn route with tight samples makes forward progress instead of orbiting a waypoint", () => {
+  const s = new Simulation(),
+    p = s.planes[0];
+  s.planes = [p];
+  s.spawnAt = s.departureAt = Infinity;
+  Object.assign(p, { x: 5000, z: 3000, y: 600, heading: Math.PI });
+  const points = Array.from({ length: 20 }, (_, i) => ({
+    x: 5000 - i * 150,
+    z: 3000 - Math.sin((i / 19) * Math.PI) * 550,
+  }));
+  assert.equal(s.vector(p, points), true);
+  advance(s, 25);
+  assert.ok(p.x < 3800, `Flight made progress: ${p.x}`);
+  assert.ok(p.route.length < 12);
+  advance(s, 45);
+  assert.ok(
+    ["to-hold", "holding"].includes(p.state),
+    "Completed vector leads to external hold",
   );
 });

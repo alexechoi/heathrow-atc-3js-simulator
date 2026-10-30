@@ -12,7 +12,7 @@ import {
 } from "./materials.js";
 import { buildTerminals } from "./terminal-architecture.js";
 import { buildRunwayMarkings } from "./runway-markings.js";
-import { RUNWAYS } from "./simulation.js";
+import { RUNWAYS, GROUND_LAYOUT } from "./simulation.js";
 function random(seed = 37) {
   return () => {
     seed = (seed * 1664525 + 1013904223) >>> 0;
@@ -399,11 +399,19 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     if (Math.abs(p[0]) > 2100 || Math.abs(p[1]) > 1550) continue;
     if (positions.some((v) => Math.hypot(p[0] - v[0], p[1] - v[1]) < 43))
       continue;
+    if (
+      GROUND_LAYOUT.gates.some(
+        (g) =>
+          g.wayId === a.id ||
+          Math.hypot(g.position[0] - p[0], g.position[1] - p[1]) < 85,
+      )
+    )
+      continue;
     const dir = new T.Vector2(p[0] - q[0], p[1] - q[1]).normalize();
     const x = p[0] - dir.x * 29,
       z = p[1] - dir.y * 29;
     const plane = aircraft(parkedCount % 7 === 0 ? "VS" : "BA", false);
-    plane.position.set(x, 5, z);
+    plane.position.set(x, plane.userData.groundHeight || 5, z);
     plane.rotation.y = -Math.atan2(dir.y, dir.x);
     parked.add(plane);
     positions.push(p);
