@@ -1,18 +1,17 @@
-import { chromium } from "playwright";
+import { captureBrowser, captureContext, settleFrame } from "./browser.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 const url = process.env.TEST_URL || "http://localhost:4173/";
-const browser = await chromium.launch({
-  executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
-  headless: true,
-  args: [
-    "--no-sandbox",
-    "--use-angle=swiftshader",
-    "--enable-unsafe-swiftshader",
-  ],
+const browser = await captureBrowser();
+const page = await browser.newPage({
+  ...captureContext,
+  viewport: { width: 1440, height: 900 },
 });
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const errors = [];
+page.on("console", (m) => {
+  if (m.type() === "error" && /WebGLProgram|Shader Error/.test(m.text()))
+    errors.push(m.text());
+});
 page.on("pageerror", (e) => errors.push(e.message));
 await fs.mkdir("work/screenshots", { recursive: true });
 await page.goto(url + "?capture", {
@@ -23,6 +22,17 @@ await page.waitForFunction(() => window.__HEATHROW__?.ready, null, {
   timeout: 120000,
 });
 await page.evaluate(() => window.__HEATHROW__.step(0.01));
+assert.ok(
+  await page.evaluate(
+    () => window.__HEATHROW__.state.geography.vectorMarkings > 400,
+  ),
+);
+if (process.env.REQUIRE_IMAGERY)
+  assert.ok(
+    await page.evaluate(() => window.__HEATHROW__.state.geography.satellite),
+    "Satellite imagery must load",
+  );
+await settleFrame(page);
 await page.screenshot({ path: "work/screenshots/04-final-desktop.png" });
 await page.click("#start");
 assert.equal(
@@ -65,6 +75,17 @@ assert.equal(
   "27R",
 );
 await page.evaluate(() => window.__HEATHROW__.step(0.01));
+assert.ok(
+  await page.evaluate(
+    () => window.__HEATHROW__.state.geography.vectorMarkings > 400,
+  ),
+);
+if (process.env.REQUIRE_IMAGERY)
+  assert.ok(
+    await page.evaluate(() => window.__HEATHROW__.state.geography.satellite),
+    "Satellite imagery must load",
+  );
+await settleFrame(page);
 await page.screenshot({ path: "work/screenshots/05-routing.png" });
 await page.click("#restart");
 await page.click('[data-runway="27L"]');
@@ -90,12 +111,45 @@ assert.equal(
 );
 await page.evaluate(() => window.__HEATHROW__.captureFrame(12));
 await page.evaluate(() => window.__HEATHROW__.step(0.01));
+assert.ok(
+  await page.evaluate(
+    () => window.__HEATHROW__.state.geography.vectorMarkings > 400,
+  ),
+);
+if (process.env.REQUIRE_IMAGERY)
+  assert.ok(
+    await page.evaluate(() => window.__HEATHROW__.state.geography.satellite),
+    "Satellite imagery must load",
+  );
+await settleFrame(page);
 await page.screenshot({ path: "work/screenshots/06-arrival.png" });
 await page.evaluate(() => window.__HEATHROW__.captureFrame(20));
 await page.evaluate(() => window.__HEATHROW__.step(0.01));
+assert.ok(
+  await page.evaluate(
+    () => window.__HEATHROW__.state.geography.vectorMarkings > 400,
+  ),
+);
+if (process.env.REQUIRE_IMAGERY)
+  assert.ok(
+    await page.evaluate(() => window.__HEATHROW__.state.geography.satellite),
+    "Satellite imagery must load",
+  );
+await settleFrame(page);
 await page.screenshot({ path: "work/screenshots/07-concourse.png" });
 await page.evaluate(() => window.__HEATHROW__.captureFrame(28));
 await page.evaluate(() => window.__HEATHROW__.step(0.01));
+assert.ok(
+  await page.evaluate(
+    () => window.__HEATHROW__.state.geography.vectorMarkings > 400,
+  ),
+);
+if (process.env.REQUIRE_IMAGERY)
+  assert.ok(
+    await page.evaluate(() => window.__HEATHROW__.state.geography.satellite),
+    "Satellite imagery must load",
+  );
+await settleFrame(page);
 await page.screenshot({ path: "work/screenshots/08-tower.png" });
 await page.keyboard.press("Escape");
 assert.equal(
@@ -116,6 +170,7 @@ await page.evaluate(() => {
     "TWO RUNWAYS. ONE CONTROLLER. PLAY IN YOUR BROWSER.";
   document.querySelector("#exit-film").style.display = "none";
 });
+await settleFrame(page);
 await page.screenshot({ path: "public/og.jpg", type: "jpeg", quality: 92 });
 await page.setViewportSize({ width: 390, height: 844 });
 await page.reload();
@@ -127,10 +182,32 @@ assert.equal(
   true,
 );
 await page.evaluate(() => window.__HEATHROW__.step(0.01));
+assert.ok(
+  await page.evaluate(
+    () => window.__HEATHROW__.state.geography.vectorMarkings > 400,
+  ),
+);
+if (process.env.REQUIRE_IMAGERY)
+  assert.ok(
+    await page.evaluate(() => window.__HEATHROW__.state.geography.satellite),
+    "Satellite imagery must load",
+  );
+await settleFrame(page);
 await page.screenshot({ path: "work/screenshots/09-mobile.png" });
 await page.click("#start");
 await page.click('[data-runway="27L"]');
 await page.evaluate(() => window.__HEATHROW__.step(0.01));
+assert.ok(
+  await page.evaluate(
+    () => window.__HEATHROW__.state.geography.vectorMarkings > 400,
+  ),
+);
+if (process.env.REQUIRE_IMAGERY)
+  assert.ok(
+    await page.evaluate(() => window.__HEATHROW__.state.geography.satellite),
+    "Satellite imagery must load",
+  );
+await settleFrame(page);
 await page.screenshot({ path: "work/screenshots/10-mobile-play.png" });
 assert.equal(errors.length, 0, errors.join("\n"));
 console.log(

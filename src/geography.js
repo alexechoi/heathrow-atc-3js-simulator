@@ -34,12 +34,60 @@ export async function loadGeography() {
     Promise.race([
       loader.loadAsync(url),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Imagery timed out")), 20000),
+        setTimeout(() => reject(new Error("Imagery timed out")), 60000),
       ),
     ]);
+  // Pre-rendered tiles are much faster and more reliable than asking the export
+  // service to render a new multi-megapixel image for every first-time visitor.
+  async function mosaic(width, height, zoom, pixels) {
+    const canvas = document.createElement("canvas");
+    canvas.width = pixels;
+    canvas.height = Math.round((pixels * height) / width);
+    const ctx = canvas.getContext("2d"),
+      world = 2 * Math.PI * R;
+    const resolution = world / (256 * 2 ** zoom),
+      left = (ox - width / 2 / k + world / 2) / resolution,
+      top = (world / 2 - (oy + height / 2 / k)) / resolution;
+    const spanX = width / k / resolution,
+      spanY = height / k / resolution,
+      scale = pixels / spanX;
+    const tasks = [];
+    let completed = 0;
+    for (
+      let row = Math.floor(top / 256);
+      row <= Math.floor((top + spanY) / 256);
+      row++
+    )
+      for (
+        let col = Math.floor(left / 256);
+        col <= Math.floor((left + spanX) / 256);
+        col++
+      )
+        tasks.push({ row, col });
+    async function worker() {
+      while (tasks.length) {
+        const { row, col } = tasks.shift();
+        const url = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${row}/${col}`;
+        const tex = await timed(url);
+        ctx.drawImage(
+          tex.image,
+          (col * 256 - left) * scale,
+          (row * 256 - top) * scale,
+          256 * scale + 0.1,
+          256 * scale + 0.1,
+        );
+        tex.dispose();
+        completed++;
+      }
+    }
+    await Promise.all(Array.from({ length: 12 }, worker));
+    const texture = new T.CanvasTexture(canvas);
+    texture.userData.tiles = completed;
+    return texture;
+  }
   const images = await Promise.allSettled([
-    timed(imageryURL(7600, 5200)),
-    timed(imageryURL(32000, 32000, 2048)),
+    mosaic(7600, 5200, 16, 4096),
+    mosaic(32000, 32000, 12, 2048),
   ]);
   for (const r of images)
     if (r.status === "fulfilled") {

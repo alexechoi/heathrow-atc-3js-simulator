@@ -15,7 +15,7 @@ for file in glob.glob('work/osm-*.xml'):
  root=E.parse(file).getroot()
  for n in root.findall('node'):nodes[n.attrib['id']]=point(float(n.attrib['lon']),float(n.attrib['lat']))
  for w in root.findall('way'):ways[w.attrib['id']]=w
-out={'origin':ORIGIN,'attribution':'© OpenStreetMap contributors','license':'ODbL-1.0','source':'https://www.openstreetmap.org/copyright','buildings':[],'aeroways':[],'roads':[],'woods':[]}
+out={'origin':ORIGIN,'attribution':'© OpenStreetMap contributors','license':'ODbL-1.0','source':'https://www.openstreetmap.org/copyright','buildings':[],'aeroways':[],'roads':[],'woods':[],'grass':[]}
 for id,w in ways.items():
  tags={t.attrib['k']:t.attrib['v'] for t in w.findall('tag')};pts=[nodes[n.attrib['ref']] for n in w.findall('nd') if n.attrib['ref'] in nodes]
  if len(pts)<2:continue
@@ -23,6 +23,7 @@ for id,w in ways.items():
   out['aeroways'].append({'id':int(id),'kind':tags['aeroway'],'ref':tags.get('ref',''),'points':pts,'width':float(tags.get('width','23').split()[0]) if tags.get('width','23').split()[0].replace('.','',1).isdigit() else 23})
  if tags.get('highway') in ['motorway','trunk','primary','secondary','tertiary','residential','service']:
   out['roads'].append({'kind':tags['highway'],'points':pts})
+ if (tags.get('landuse') in ['grass','meadow'] or tags.get('natural')=='grassland') and len(pts)>=4 and pts[0]==pts[-1]:out['grass'].append(pts)
  if tags.get('natural') in ['wood'] or tags.get('landuse')=='forest':out['woods'].append(pts)
  if tags.get('building') and len(pts)>=4 and pts[0]==pts[-1] and tags['building'] not in ['roof','construction']:
   poly=Polygon(pts)

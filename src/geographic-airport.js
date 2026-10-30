@@ -6,7 +6,12 @@ import {
   facadeMaterial,
   roofMaterial,
   wallMaterial,
+  claddingMaterial,
+  runwayMaterial,
+  turfMaterial,
 } from "./materials.js";
+import { buildTerminals } from "./terminal-architecture.js";
+import { buildRunwayMarkings } from "./runway-markings.js";
 import { RUNWAYS } from "./simulation.js";
 function random(seed = 37) {
   return () => {
@@ -21,6 +26,33 @@ export function buildGeographicAirport(scene, { data, near, far }) {
   const batches = new Map();
   const mats = {
     glass: facadeMaterial(),
+    cladding: claddingMaterial(),
+    rooflight: new T.MeshStandardMaterial({
+      color: 0x729598,
+      metalness: 0.35,
+      roughness: 0.32,
+      side: T.DoubleSide,
+    }),
+    gravel: new T.MeshStandardMaterial({ color: 0x8d8778, roughness: 1 }),
+    runway: runwayMaterial(),
+    paint: new T.MeshStandardMaterial({
+      color: 0xe4e4d9,
+      roughness: 0.94,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    }),
+    yellow: new T.MeshStandardMaterial({ color: 0xd5af46, roughness: 0.95 }),
+    asphalt: runwayMaterial(0x77796f),
+    apron: runwayMaterial(0x898b80, true),
+    turf: turfMaterial(),
+    rubber: new T.MeshStandardMaterial({
+      color: 0x141a1a,
+      roughness: 0.98,
+      transparent: true,
+      opacity: 0.22,
+      depthWrite: false,
+    }),
     house: facadeMaterial("house"),
     roof: roofMaterial(),
     concrete: wallMaterial(),
@@ -38,6 +70,21 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     }),
     red: new T.MeshStandardMaterial({ color: 0x795447, roughness: 0.9 }),
   };
+  // Large airport viewing distances make coplanar centimetre offsets unstable.
+  // Give each ground layer a deterministic depth bias as well as its elevation.
+  for (const [key, bias] of Object.entries({
+    apron: 4,
+    turf: 3,
+    asphalt: 2,
+    runway: 1,
+    yellow: -1,
+    paint: -2,
+    rubber: -2,
+  })) {
+    mats[key].polygonOffset = true;
+    mats[key].polygonOffsetFactor = bias;
+    mats[key].polygonOffsetUnits = bias;
+  }
   function put(g, mat, x = 0, y = 0, z = 0, ry = 0) {
     g.rotateY(ry);
     g.translate(x, y, z);
@@ -69,8 +116,8 @@ export function buildGeographicAirport(scene, { data, near, far }) {
   ctx.translate(c.width / 2, c.height / 2);
   ctx.scale(c.width / W, c.height / H);
   const maskCanvas = document.createElement("canvas");
-  maskCanvas.width = 1024;
-  maskCanvas.height = Math.round((1024 * H) / W);
+  maskCanvas.width = 4096;
+  maskCanvas.height = Math.round((4096 * H) / W);
   const mc = maskCanvas.getContext("2d");
   mc.fillStyle = "#000";
   mc.fillRect(0, 0, mc.canvas.width, mc.canvas.height);
@@ -126,58 +173,6 @@ export function buildGeographicAirport(scene, { data, near, far }) {
       50,
       "#0000ff",
     );
-    for (const side of [-1, 1]) {
-      path(
-        ctx,
-        [
-          [lo, r.z + side * 23],
-          [hi, r.z + side * 23],
-        ],
-        0.7,
-        "#d9dcd0",
-      );
-      const end = side < 0 ? lo : hi;
-      for (let j = -4; j <= 4; j++)
-        if (j) {
-          ctx.fillStyle = "#e4e6d5";
-          ctx.fillRect(end - side * 40 - 15, r.z + j * 4.7 - 1.2, 30, 2.4);
-        }
-      for (const off of [300, 450, 600])
-        for (const dz of [-16, 16]) {
-          ctx.fillStyle = "#e4e6d5";
-          ctx.fillRect(end - side * off - 15, r.z + dz - 2, 30, 4);
-        }
-      ctx.save();
-      ctx.translate(end - side * 115, r.z);
-      ctx.rotate(side > 0 ? -Math.PI / 2 : Math.PI / 2);
-      ctx.fillStyle = "#e7e8d8";
-      ctx.font = "bold 20px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(side > 0 ? id : "09" + (id === "27R" ? "L" : "R"), 0, 7);
-      ctx.restore();
-    }
-    for (let x = lo + 180; x < hi - 180; x += 60)
-      path(
-        ctx,
-        [
-          [x, r.z],
-          [x + 30, r.z],
-        ],
-        1.8,
-        "#d5dbd0",
-      );
-    for (let i = 0; i < 80; i++) {
-      const z = r.z + (rand() - 0.5) * 10;
-      path(
-        ctx,
-        [
-          [hi - 160 - rand() * 240, z],
-          [hi - 600 - rand() * 300, z],
-        ],
-        0.5,
-        "rgba(12,20,22,.28)",
-      );
-    }
   }
   // The PBR mask leaves geographic imagery outside the pavement unaltered.
   const probe = document.createElement("canvas");
@@ -206,20 +201,98 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     new T.PlaneGeometry(W, H),
     groundMaterial(map, mask),
   );
+  ground.name = "satellite-ground";
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   group.add(ground);
+  // A ring, not another full plane: overlapping kilometre-scale ground planes
+  // otherwise compete for depth and can hide the detailed airfield at low angles.
+  const outerPieces = [];
+  for (const [x, z, w, h] of [
+    [0, -(16000 + H / 2) / 2, 32000, 16000 - H / 2],
+    [0, (16000 + H / 2) / 2, 32000, 16000 - H / 2],
+    [-(16000 + W / 2) / 2, 0, 16000 - W / 2, H],
+    [(16000 + W / 2) / 2, 0, 16000 - W / 2, H],
+  ]) {
+    const g = new T.PlaneGeometry(w, h);
+    g.rotateX(-Math.PI / 2);
+    g.translate(x, -0.1, z);
+    const p = g.attributes.position,
+      uv = g.attributes.uv;
+    for (let i = 0; i < p.count; i++)
+      uv.setXY(i, p.getX(i) / 32000 + 0.5, 0.5 - p.getZ(i) / 32000);
+    outerPieces.push(g);
+  }
   const outer = new T.Mesh(
-    new T.PlaneGeometry(32000, 32000),
+    mergeGeometries(outerPieces),
     new T.MeshStandardMaterial({
       map: far || null,
       color: far ? 0xffffff : 0x637055,
       roughness: 1,
     }),
   );
-  outer.rotation.x = -Math.PI / 2;
-  outer.position.y = -1;
+
+  outer.name = "far-satellite";
   group.add(outer);
+  function stripe(points, width, mat, y = 0.06) {
+    const positions = [],
+      uv = [];
+    for (let i = 1; i < points.length; i++) {
+      const [ax, az] = points[i - 1],
+        [bx, bz] = points[i];
+      const len = Math.hypot(bx - ax, bz - az);
+      if (len < 0.01) continue;
+      const dx = ((-(bz - az) / len) * width) / 2,
+        dz = (((bx - ax) / len) * width) / 2;
+      for (const [x, z] of [
+        [ax + dx, az + dz],
+        [ax - dx, az - dz],
+        [bx + dx, bz + dz],
+        [bx + dx, bz + dz],
+        [ax - dx, az - dz],
+        [bx - dx, bz - dz],
+      ]) {
+        positions.push(x, y, z);
+        uv.push(x / 10, z / 10);
+      }
+    }
+    if (!positions.length) return;
+    const g = new T.BufferGeometry();
+    g.setAttribute("position", new T.Float32BufferAttribute(positions, 3));
+    g.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
+    g.computeVertexNormals();
+    put(g, mat);
+  }
+  // Crisp mapped pavement outlines and narrow taxi/stand paint at close range.
+  // OSM stand aprons stop at their operational boundary, leaving service roads
+  // and terminal curtilages out. Pave those precincts, then restore mapped turf.
+  for (const [x1, z1, x2, z2] of [
+    [-2040, -360, -900, 365],
+    [1075, -360, 1365, 335],
+  ]) {
+    const g = new T.PlaneGeometry(x2 - x1, z2 - z1);
+    g.rotateX(-Math.PI / 2);
+    put(g, "apron", (x1 + x2) / 2, 0.015, (z1 + z2) / 2);
+  }
+  for (const pts of data.grass || []) {
+    if (pts.some(([x, z]) => Math.abs(x) > 3300 || Math.abs(z) > 2100))
+      continue;
+    const g = new T.ShapeGeometry(shape(pts));
+    g.rotateX(-Math.PI / 2);
+    put(g, "turf", 0, 0.045, 0);
+  }
+  for (const a of data.aeroways) {
+    if (a.kind === "apron") {
+      const g = new T.ShapeGeometry(shape(a.points));
+      g.rotateX(-Math.PI / 2);
+      put(g, "apron", 0, 0.025, 0);
+    }
+    if (a.kind === "taxiway") {
+      stripe(a.points, a.width || 23, "asphalt", 0.03);
+      stripe(a.points, 0.23, "yellow", 0.065);
+    }
+    if (a.kind === "parking_position") stripe(a.points, 0.18, "yellow", 0.07);
+  }
   // Urban buildings are extruded from real OSM footprints. OSM heights are used when available.
   const special = new Set([23231957, 23479613, 23479729, 294572024, 133146402]);
   for (const b of data.buildings) {
@@ -228,6 +301,7 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length,
       cz = pts.reduce((a, p) => a + p[1], 0) / pts.length;
     if (Math.abs(cx) > 4200 || Math.abs(cz) > 3000) continue;
+    const airportBuilding = Math.abs(cx) < 2400 && cz > -460 && cz < 1550;
     let h = b.height;
     if (b.terminal) h = Math.max(h, 16);
     const g = new T.ExtrudeGeometry(shape(pts), {
@@ -236,104 +310,17 @@ export function buildGeographicAirport(scene, { data, near, far }) {
       steps: 1,
     });
     g.rotateX(-Math.PI / 2);
-    put(g, b.terminal ? "glass" : "house");
+    put(g, airportBuilding ? "cladding" : "house");
     const roof = new T.ShapeGeometry(shape(pts));
     roof.rotateX(-Math.PI / 2);
-    put(roof, h > 12 || b.terminal ? "roof" : "red", 0, h + 0.06, 0);
+    put(roof, airportBuilding || h > 12 ? "gravel" : "red", 0, h + 0.06, 0);
     if (h > 12 && Math.abs(cx) < 2100 && Math.abs(cz) < 1450) {
       box(cx, h + 1.4, cz, 8, 2.8, 6, "dark");
       box(cx, h + 2.85, cz, 8.5, 0.2, 6.5, "steel");
     }
   }
-  // Curved terminals are placed over their mapped, bridge-trimmed cores.
-  function terminal(x, z, w, d, name, height = 28) {
-    box(x, height / 2, z, w, height, d, "glass");
-    box(x, 1.5, z, w + 2, 3, d + 2, "concrete");
-    const verts = [],
-      indices = [],
-      uv = [];
-    const n = 28;
-    for (let j = 0; j <= 1; j++)
-      for (let i = 0; i <= n; i++) {
-        const u = i / n;
-        verts.push(
-          x + (u - 0.5) * w,
-          height + Math.sin(u * Math.PI) * Math.min(13, w * 0.15),
-          z + (j - 0.5) * (d + 4),
-        );
-        uv.push(u, j);
-      }
-    for (let i = 0; i < n; i++) {
-      const a = i,
-        b = i + 1,
-        cc = i + n + 1;
-      indices.push(a, cc, b, b, cc, cc + 1);
-    }
-    const roof = new T.BufferGeometry();
-    roof.setAttribute("position", new T.Float32BufferAttribute(verts, 3));
-    roof.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
-    roof.setIndex(indices);
-    roof.computeVertexNormals();
-    put(roof, "roof");
-    for (let zz = z - d / 2; zz <= z + d / 2; zz += 12) {
-      for (const side of [-1, 1])
-        box(x + (side * w) / 2, height / 2, zz, 0.6, height, 0.6, "steel");
-    }
-    for (const y of [height * 0.33, height * 0.67]) {
-      box(x, y, z - d / 2, w, 0.5, 0.5, "steel");
-      box(x, y, z + d / 2, w, 0.5, 0.5, "steel");
-    }
-    for (let zz = z - d / 2 + 35; zz < z + d / 2 - 15; zz += 75)
-      for (const side of [-1, 1]) {
-        box(x + side * (w / 2 + 16), 7, zz - 12, 32, 4.5, 4.6, "white");
-        box(
-          x + side * (w / 2 + 33),
-          7,
-          zz - 5,
-          17,
-          4.5,
-          4.6,
-          "white",
-          side * -0.55,
-        );
-        cyl(x + side * (w / 2 + 36), 3, zz, 1, 6);
-      }
-    for (let zz = z - d / 2 + 30; zz < z + d / 2 - 10; zz += 55) {
-      box(x - w * 0.27, height + 8, zz, 6, 2, 10, "dark");
-      for (let k = 0; k < 5; k++)
-        box(x - w * 0.27, height + 9.1, zz - 4 + k * 2, 6.2, 0.2, 0.4, "steel");
-    }
-    const cv = document.createElement("canvas");
-    cv.width = 512;
-    cv.height = 96;
-    const ct = cv.getContext("2d");
-    ct.fillStyle = "#e4edda";
-    ct.font = "bold 54px sans-serif";
-    ct.textAlign = "center";
-    ct.fillText(name, 256, 65);
-    const tex = new T.CanvasTexture(cv);
-    const sign = new T.Mesh(
-      new T.PlaneGeometry(Math.min(w, 85), 14),
-      new T.MeshBasicMaterial({ map: tex, transparent: true }),
-    );
-    sign.position.set(x, height + 4, z + d / 2 + 3);
-    group.add(sign);
-  }
-  terminal(-1894, -43, 170, 390, "TERMINAL 5", 28);
-  terminal(-1432, 37, 58, 433, "5B", 22);
-  terminal(-1071, 26, 46, 345, "5C", 22);
-  terminal(1217, -19, 66, 522, "2B", 24);
-  // Terminal 2A's broad undulating roof, with mapped footprint walls.
-  const t2 = data.buildings.find((b) => b.id === 133146402);
-  if (t2) {
-    const g = new T.ExtrudeGeometry(shape(t2.points), {
-      depth: 23,
-      bevelEnabled: false,
-    });
-    g.rotateX(-Math.PI / 2);
-    put(g, "glass");
-    terminal(780, 100, 230, 170, "TERMINAL 2", 27);
-  }
+  buildTerminals({ put, box, cyl });
+  const markingCount = buildRunwayMarkings({ runways: RUNWAYS, put, box });
   // The real tower position, from OSM's aircraft_control node.
   const towerX = -337.7,
     towerZ = -60.2;
@@ -368,13 +355,13 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     if (
       a.kind !== "parking_position" ||
       a.points.length < 2 ||
-      parkedCount >= 90
+      parkedCount >= 140
     )
       continue;
     const p = a.points.at(-1),
       q = a.points.at(-2);
     if (Math.abs(p[0]) > 2100 || Math.abs(p[1]) > 1550) continue;
-    if (positions.some((v) => Math.hypot(p[0] - v[0], p[1] - v[1]) < 50))
+    if (positions.some((v) => Math.hypot(p[0] - v[0], p[1] - v[1]) < 43))
       continue;
     const dir = new T.Vector2(p[0] - q[0], p[1] - q[1]).normalize();
     const x = p[0] - dir.x * 29,
@@ -386,7 +373,30 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     positions.push(p);
     parkedCount++;
     box(x + 15, 1.5, z + 23, 7, 3, 2.8, "white");
-    box(x - 10, 1, z + 23, 5, 2, 2, "warm");
+    box(x - 10, 1, z + 23, 5, 2, 2, "yellow");
+    // A stand's equipment, service lanes and safety clearances give the apron scale.
+    for (let j = 0; j < 4; j++) {
+      box(x + 19 + j * 3.2, 0.8, z + 26, 2.5, 1.1, 1.5, "steel");
+      for (const zz of [-0.6, 0.6])
+        box(x + 19 + j * 3.2, 0.35, z + 26 + zz, 1.8, 0.55, 0.22, "dark");
+    }
+    const angle = Math.atan2(dir.y, dir.x),
+      cs = Math.cos(angle),
+      sn = Math.sin(angle);
+    const local = (u, v) => [x + u * cs - v * sn, z + u * sn + v * cs];
+    stripe(
+      [local(-30, -27), local(22, -27), local(22, 27), local(-30, 27)],
+      0.22,
+      "paint",
+      0.075,
+    );
+    for (const side of [-1, 1])
+      stripe(
+        [local(-32, side * 29), local(28, side * 29)],
+        0.14,
+        "yellow",
+        0.08,
+      );
   }
   parked.updateMatrixWorld(true);
   const planeBatches = new Map();
@@ -527,7 +537,16 @@ export function buildGeographicAirport(scene, { data, near, far }) {
   for (const [key, geos] of batches) {
     if (!geos.length) continue;
     const mesh = new T.Mesh(mergeGeometries(geos), mats[key]);
-    mesh.castShadow = true;
+    mesh.name = `airport:${key}`;
+    mesh.castShadow = ![
+      "paint",
+      "rubber",
+      "runway",
+      "asphalt",
+      "apron",
+      "yellow",
+      "turf",
+    ].includes(key);
     mesh.receiveShadow = true;
     group.add(mesh);
     geos.forEach((g) => g.dispose());
@@ -561,6 +580,7 @@ export function buildGeographicAirport(scene, { data, near, far }) {
       airfieldFeatures: data.aeroways.length,
       satellite: !!near,
       parked: parkedCount,
+      vectorMarkings: markingCount,
     },
     update(t) {
       vehicles.forEach((v, i) => {

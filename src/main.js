@@ -60,7 +60,7 @@ Object.assign(sun.shadow.camera, {
   near: 100,
   far: 12000,
 });
-sun.shadow.normalBias = 2;
+sun.shadow.normalBias = 0.25;
 sun.shadow.bias = -0.0002;
 scene.add(sun);
 // CC0 photographic skies from Poly Haven. Both are bundled for offline-capable rendering.
@@ -90,7 +90,7 @@ const atmosphere = new T.Mesh(
       strength: { value: 0.7 },
     },
     vertexShader: `varying vec3 vWorld;void main(){vWorld=(modelMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-    fragmentShader: `uniform sampler2D skyMap;uniform vec3 horizon;uniform float strength;varying vec3 vWorld;void main(){vec3 d=normalize(vWorld-cameraPosition);vec2 uv=vec2(atan(d.z,d.x)/6.2831853+.5+.1114,asin(clamp(d.y,-1.,1.))/3.14159265+.5);vec3 sky=texture2D(skyMap,uv).rgb*strength;float blend=smoothstep(-.02,.2,d.y);gl_FragColor=vec4(mix(horizon,sky,blend),1.);
+    fragmentShader: `uniform sampler2D skyMap;uniform vec3 horizon;uniform float strength;varying vec3 vWorld;void main(){vec3 d=normalize(vWorld-cameraPosition);vec2 uv=vec2(atan(d.z,d.x)/6.2831853+.5+.1114,asin(clamp(d.y,-1.,1.))/3.14159265+.5);uv.x=fract(uv.x);vec3 sky=texture2D(skyMap,uv).rgb*strength;float blend=smoothstep(-.02,.2,d.y);gl_FragColor=vec4(mix(horizon,sky,blend),1.);
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
 }`,
@@ -258,8 +258,8 @@ function setDay(next) {
           ? "night"
           : "golden";
   const configs = {
-    golden: [0xffc38b, 3.1, 2.3, 0.85, 0xbac8cb, 2700],
-    day: [0xfff2d7, 3, 3, 0.9, 0xc0d3dc, 7000],
+    golden: [0xffd2a4, 3.1, 0.85, 0.85, 0xbac8cb, 2700],
+    day: [0xfff2e5, 3, 0.75, 0.9, 0xc0d3dc, 7000],
     night: [0xa0b8e0, 0.35, 0.7, 0.9, 0x152a3c, -200],
   };
   const [color, int, h, ex, fog, y] = configs[day];
@@ -278,6 +278,10 @@ function setDay(next) {
   atmosphere.material.uniforms.strength.value = scene.backgroundIntensity;
   materialState.interior.value = day === "night" ? 1.6 : 0.35;
   materialState.wetness.value = day === "night" ? 0.5 : 0.22;
+  airport.lights.forEach((light) => {
+    light.material.opacity = day === "night" ? 1 : 0.16;
+    light.material.size = day === "night" ? 3 : 1.2;
+  });
   post.preset(day);
   $("#daylight span").textContent = {
     golden: "Golden hour",
@@ -761,6 +765,8 @@ window.__HEATHROW__ = {
     updateModels(0);
     cinema(t);
     renderScene();
+    // Offline capture must finish the GPU work before Chromium composites a frame.
+    renderer.getContext().finish();
   },
 };
 $("#loading").classList.add("hidden");
