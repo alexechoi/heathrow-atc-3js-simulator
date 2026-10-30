@@ -51,7 +51,7 @@ scene.add(hemi);
 const sun = new T.DirectionalLight(0xffc38b, 3.1);
 sun.position.set(-5000, 1600, -2600);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(4096, 4096);
 Object.assign(sun.shadow.camera, {
   left: -2800,
   right: 2800,
@@ -60,8 +60,9 @@ Object.assign(sun.shadow.camera, {
   near: 100,
   far: 12000,
 });
+sun.shadow.camera.updateProjectionMatrix();
 sun.shadow.normalBias = 0.25;
-sun.shadow.bias = -0.0002;
+sun.shadow.bias = -0.00001;
 scene.add(sun);
 // CC0 photographic skies from Poly Haven. Both are bundled for offline-capable rendering.
 $("#loading-detail").textContent =
@@ -710,6 +711,7 @@ function animate(now) {
   requestAnimationFrame(animate);
 }
 setView("follow");
+setDay("golden");
 updateUI();
 step(0.016);
 requestAnimationFrame(animate);

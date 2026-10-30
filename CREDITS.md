@@ -28,7 +28,7 @@ The following original 1K JPG diffuse, OpenGL normal and roughness maps are bund
 
 - [Asphalt 02](https://polyhaven.com/a/asphalt_02), Rob Tuytel.
 - [Concrete](https://polyhaven.com/a/concrete), see the linked asset page for its author.
-- [Aerial Grass Rock](https://polyhaven.com/a/aerial_grass_rock), Rob Tuytel.
+- [Grass Ground](https://polyhaven.com/a/grass_ground), Poly Haven.
 
 ## Geographic data and imagery
 

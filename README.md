@@ -74,8 +74,9 @@ The in-browser reel includes a blue-hour tower sequence and is 42 seconds; the e
 
 - `src/simulation.js` — pure game logic and separation checks.
 - `src/geographic-airport.js` — mapped airport geometry, structures, scenery and instancing.
-- `src/geography.js` — coordinate reference and live satellite imagery.
+- `src/geography.js` — coordinate reference and runtime satellite tiles.
 - `src/materials.js` / `src/postprocessing.js` — PBR surfaces, facade shaders and the HDR rendering pipeline.
+- `src/terminal-architecture.js` / `src/runway-markings.js` — photo-studied terminal profiles and metre-scaled vector paint.
 - `src/aircraft.js` — procedural airframes and liveries.
 - `src/main.js` — renderer, interaction, cameras, radio and UI.
 - `tests/` and `scripts/` — repeatable tests and recording.

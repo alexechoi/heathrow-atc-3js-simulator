@@ -171,7 +171,11 @@ await page.evaluate(() => {
   document.querySelector("#exit-film").style.display = "none";
 });
 await settleFrame(page);
-await page.screenshot({ path: "public/og.jpg", type: "jpeg", quality: 92 });
+await page.screenshot({
+  path: "work/screenshots/social-check.jpg",
+  type: "jpeg",
+  quality: 92,
+});
 await page.setViewportSize({ width: 390, height: 844 });
 await page.reload();
 await page.waitForFunction(() => window.__HEATHROW__?.ready, null, {

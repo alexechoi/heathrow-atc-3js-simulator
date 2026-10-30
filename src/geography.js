@@ -31,12 +31,22 @@ export async function loadGeography() {
   });
   const loader = new T.TextureLoader();
   const timed = (url) =>
-    Promise.race([
-      loader.loadAsync(url),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Imagery timed out")), 60000),
-      ),
-    ]);
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("Imagery tile timed out")),
+        15000,
+      );
+      loader.loadAsync(url).then(
+        (t) => {
+          clearTimeout(timer);
+          resolve(t);
+        },
+        (e) => {
+          clearTimeout(timer);
+          reject(e);
+        },
+      );
+    });
   // Pre-rendered tiles are much faster and more reliable than asking the export
   // service to render a new multi-megapixel image for every first-time visitor.
   async function mosaic(width, height, zoom, pixels) {
@@ -52,7 +62,8 @@ export async function loadGeography() {
       spanY = height / k / resolution,
       scale = pixels / spanX;
     const tasks = [];
-    let completed = 0;
+    let completed = 0,
+      missing = 0;
     for (
       let row = Math.floor(top / 256);
       row <= Math.floor((top + spanY) / 256);
@@ -67,20 +78,46 @@ export async function loadGeography() {
     async function worker() {
       while (tasks.length) {
         const { row, col } = tasks.shift();
-        const url = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${row}/${col}`;
-        const tex = await timed(url);
-        ctx.drawImage(
-          tex.image,
-          (col * 256 - left) * scale,
-          (row * 256 - top) * scale,
-          256 * scale + 0.1,
-          256 * scale + 0.1,
-        );
-        tex.dispose();
-        completed++;
+        let tex = null,
+          parent = false;
+        for (const host of [
+          "server.arcgisonline.com",
+          "services.arcgisonline.com",
+        ]) {
+          try {
+            tex = await timed(
+              `https://${host}/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${row}/${col}`,
+            );
+            break;
+          } catch {}
+        }
+        if (!tex) {
+          try {
+            tex = await timed(
+              `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom - 1}/${Math.floor(row / 2)}/${Math.floor(col / 2)}`,
+            );
+            parent = true;
+          } catch {}
+        }
+        if (tex) {
+          ctx.drawImage(
+            tex.image,
+            parent ? (col % 2) * 128 : 0,
+            parent ? (row % 2) * 128 : 0,
+            parent ? 128 : 256,
+            parent ? 128 : 256,
+            (col * 256 - left) * scale,
+            (row * 256 - top) * scale,
+            256 * scale + 0.1,
+            256 * scale + 0.1,
+          );
+          tex.dispose();
+          completed++;
+        } else missing++;
       }
     }
     await Promise.all(Array.from({ length: 12 }, worker));
+    if (missing) throw new Error(`${missing} satellite tiles unavailable`);
     const texture = new T.CanvasTexture(canvas);
     texture.userData.tiles = completed;
     return texture;

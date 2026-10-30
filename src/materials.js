@@ -8,21 +8,17 @@ let shaderSerial = 0;
 export async function loadMaterials() {
   const loader = new T.TextureLoader();
   await Promise.all(
-    [
-      "asphalt_02",
-      "concrete",
-      "concrete_floor_02",
-      "aerial_grass_rock",
-    ].flatMap((name) =>
-      ["diff", "nor_gl", "rough"].map(async (kind) => {
-        const t = await loader.loadAsync(
-          `/assets/textures/${name}_${kind}_1k.jpg`,
-        );
-        t.wrapS = t.wrapT = T.RepeatWrapping;
-        t.anisotropy = 8;
-        if (kind === "diff") t.colorSpace = T.SRGBColorSpace;
-        textures[name + "_" + kind] = t;
-      }),
+    ["asphalt_02", "concrete", "concrete_floor_02", "grass_ground"].flatMap(
+      (name) =>
+        ["diff", "nor_gl", "rough"].map(async (kind) => {
+          const t = await loader.loadAsync(
+            `/assets/textures/${name}_${kind}_1k.jpg`,
+          );
+          t.wrapS = t.wrapT = T.RepeatWrapping;
+          t.anisotropy = 8;
+          if (kind === "diff") t.colorSpace = T.SRGBColorSpace;
+          textures[name + "_" + kind] = t;
+        }),
     ),
   );
 }
@@ -57,7 +53,7 @@ export function groundMaterial(map, mask) {
   });
   const uniforms = { uMask: { value: mask }, uWet: materialState.wetness };
   for (const [short, name] of [
-    ["Grass", "aerial_grass_rock"],
+    ["Grass", "grass_ground"],
     ["Concrete", "concrete_floor_02"],
     ["Asphalt", "asphalt_02"],
   ])
@@ -244,17 +240,30 @@ export function runwayMaterial(color = 0x343938, concrete = false) {
         value:
           textures[concrete ? "concrete_floor_02_diff" : "asphalt_02_diff"],
       },
+      uPavementNormal: {
+        value:
+          textures[concrete ? "concrete_floor_02_nor_gl" : "asphalt_02_nor_gl"],
+      },
     },
-    "uniform sampler2D uAsphalt;",
+    "uniform sampler2D uAsphalt,uPavementNormal;",
     (s) => {
       s.fragmentShader = s.fragmentShader.replace(
         "#include <color_fragment>",
         `#include <color_fragment>
 vec3 asphalt=texture2D(uAsphalt,vSurfaceWorld.xz/5.).rgb;
-diffuseColor.rgb*=mix(vec3(1.),clamp(asphalt*4.,.7,1.25),${concrete ? ".3" : ".6"});
+float grain=dot(asphalt,vec3(.3,.59,.11))*${concrete ? "6." : "10."};
+diffuseColor.rgb*=mix(1.,clamp(grain,.55,1.45),${concrete ? ".5" : ".75"});
 float repair=.95+.05*sin(vSurfaceWorld.x*.031)*sin(vSurfaceWorld.z*.43);
 diffuseColor.rgb*=repair;
 ${concrete ? `vec2 slab=vSurfaceWorld.xz/5.;vec2 e=min(fract(slab),1.-fract(slab));vec2 aa=max(fwidth(slab),vec2(.0001));float joint=1.-smoothstep(.003,.003+aa.x,e.x)*smoothstep(.003,.003+aa.y,e.y);diffuseColor.rgb*=1.-joint*.1;float variation=fract(sin(dot(floor(slab),vec2(12.9898,78.233)))*43758.5453);diffuseColor.rgb*=.96+.07*variation;` : ""}
+`,
+      );
+      s.fragmentShader = s.fragmentShader.replace(
+        "#include <normal_fragment_maps>",
+        `#include <normal_fragment_maps>
+vec3 pavementN=texture2D(uPavementNormal,vSurfaceWorld.xz/5.).xyz*2.-1.;
+float pavementFade=exp(-length(vSurfaceWorld-cameraPosition)*.004);
+normal=normalize(normal+mat3(viewMatrix)*vec3(pavementN.x,0.,pavementN.y)*.23*pavementFade);
 `,
       );
     },
@@ -264,9 +273,9 @@ export function turfMaterial() {
   return worldShader(
     new T.MeshStandardMaterial({ color: 0xffffff, roughness: 1 }),
     {
-      uTurf: { value: textures.aerial_grass_rock_diff },
-      uGreen: { value: new T.Color(0x637348) },
-      uDry: { value: new T.Color(0x8b815a) },
+      uTurf: { value: textures.grass_ground_diff },
+      uGreen: { value: new T.Color(0x56663c) },
+      uDry: { value: new T.Color(0x7b734f) },
     },
     `uniform sampler2D uTurf;uniform vec3 uGreen,uDry;
 float th(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -280,7 +289,9 @@ vec2 p=vSurfaceWorld.xz;
 float variation=tn(p*.012)*.55+tn(p*.057)*.3+tn(p*.24)*.15;
 vec3 tex=mix(texture2D(uTurf,p/4.8).rgb,texture2D(uTurf,mat2(.8,-.6,.6,.8)*p/13.1).rgb,.5);
 diffuseColor.rgb=mix(uGreen,uDry,smoothstep(.27,.8,variation));
-diffuseColor.rgb*=clamp(tex*3.4,.72,1.17);
+float detailLuma=dot(tex,vec3(.3,.59,.11));
+float detailGain=clamp(detailLuma*9.,.6,1.5);
+diffuseColor.rgb*=detailGain;
 `,
       );
     },
