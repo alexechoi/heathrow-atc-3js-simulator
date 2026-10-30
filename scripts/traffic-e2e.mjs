@@ -104,6 +104,21 @@ try {
     ),
     "taxiing",
   );
+  await p.click("#restart");
+  assert.equal(await p.evaluate(() => window.__HEATHROW__.sim.time), 0);
+  await p.setViewportSize({ width: 390, height: 667 });
+  await p.evaluate(() => window.__HEATHROW__.step(0.4));
+  const panels = await p.evaluate(() => ({
+    trafficBottom: document.querySelector(".traffic").getBoundingClientRect()
+      .bottom,
+    commandTop: document.querySelector("#command").getBoundingClientRect().top,
+    statsBottom: document.querySelector("#game-stats").getBoundingClientRect()
+      .bottom,
+  }));
+  assert.ok(panels.trafficBottom < panels.commandTop, JSON.stringify(panels));
+  assert.ok(panels.statsBottom < 160, JSON.stringify(panels));
+  await settleFrame(p);
+  await p.screenshot({ path: "work/screenshots/traffic-small-phone.png" });
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({

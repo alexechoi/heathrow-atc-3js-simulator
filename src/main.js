@@ -135,7 +135,8 @@ let playing = false,
   uiTimer = 0,
   toastTimer,
   frameCounter = 0,
-  fpsTime = 0;
+  fpsTime = 0,
+  fpsSamples = 0;
 const models = new Map(),
   labels = new Map();
 const routeGroup = new T.Group();
@@ -833,11 +834,13 @@ function step(dt) {
 let manual = new URLSearchParams(location.search).has("capture");
 function animate(now) {
   if (!manual) {
-    const dt = Math.min((now - lastTime) / 1000, 0.05);
-    step(dt);
-    fpsTime += dt;
+    const frameSeconds = (now - lastTime) / 1000;
+    step(Math.min(frameSeconds, 0.05));
+    fpsTime += frameSeconds;
+    fpsSamples++;
     if (fpsTime > 1) {
-      $("#fps").textContent = Math.round(1 / Math.max(dt, 0.001)) + " FPS";
+      $("#fps").textContent = Math.round(fpsSamples / fpsTime) + " FPS";
+      fpsSamples = 0;
       fpsTime = 0;
     }
   }

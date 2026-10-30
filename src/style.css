@@ -1167,3 +1167,68 @@ body:has(#film:not(.hidden)) #imagery-credit {
 .flight-info small {
   overflow-wrap: anywhere;
 }
+
+@media (max-width: 700px) {
+  body.playing .weather {
+    display: none;
+  }
+  body.playing #game-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    top: 88px;
+    bottom: auto;
+    left: 16px;
+    right: 16px;
+    padding: 10px 12px;
+  }
+  body.playing #game-stats > div {
+    margin: 0;
+    flex: 1;
+  }
+  body.playing #game-stats strong {
+    font-size: 18px;
+    margin-top: 4px;
+  }
+  body.playing #game-stats .eyebrow {
+    font-size: 6px;
+    letter-spacing: 1px;
+  }
+  body.playing #game-stats button {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 32px;
+    padding: 4px;
+  }
+  body.playing .traffic {
+    top: 195px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-height: none;
+    overflow: hidden;
+  }
+  body.playing .traffic > .panel-heading,
+  body.playing .traffic-footer {
+    display: none;
+  }
+  body.playing .traffic-tabs {
+    padding: 6px;
+  }
+  body.playing #flight-list {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 64px;
+  }
+  body.playing .flight-row {
+    min-width: 195px;
+    flex: 0 0 195px;
+  }
+  body.playing #command {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+}
