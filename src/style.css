@@ -267,14 +267,87 @@ h1 {
   background: #c7f4cd12;
 }
 .airline-mark {
-  font: bold 10px "Space Grotesk Variable";
-  width: 26px;
-  height: 26px;
-  border: 1px solid #b3cee22f;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  color: #dae8ec;
+  border-radius: 7px;
+  background: #fff;
+  overflow: hidden;
+}
+.airline-mark img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.selected-flight {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.traffic-tabs {
+  display: flex;
+  padding: 0 12px 10px;
+  gap: 6px;
+}
+.traffic-tabs button {
+  flex: 1;
+  padding: 7px 4px;
+  font-size: 10px;
+  border-radius: 5px;
+}
+.traffic-tabs .active {
+  color: var(--mint);
+  background: #c7f4cd18;
+  border-color: #c7f4cd55;
+}
+#flight-list {
+  max-height: min(43vh, 440px);
+  overflow-y: auto;
+}
+.traffic-empty {
+  padding: 14px;
+  font-size: 11px;
+  color: #90a2a6;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.runway-buttons button.occupied {
+  border-color: #f4a057;
+  background: #f4a05715;
+}
+.runway-buttons button.occupied small {
+  color: #ffc17e;
+}
+#shift-report {
+  position: absolute;
+  z-index: 20;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(390px, 88vw);
+  padding: 28px;
+  border-color: #ff8a6755;
+  background: #131d24ee;
+  box-shadow: 0 20px 100px #0009;
+}
+#shift-report .eyebrow {
+  color: #ff9676;
+}
+#shift-report h2 {
+  font: 500 42px "Space Grotesk Variable";
+  margin: 10px 0 16px;
+}
+#shift-report p {
+  line-height: 1.6;
+  font-size: 13px;
+}
+#shift-result {
+  color: var(--mint);
+  margin-bottom: 22px;
 }
 .flight-info {
   flex: 1;
@@ -795,7 +868,13 @@ body.drawing #world {
     font-size: 7px;
   }
   .airline-mark {
-    display: none;
+    width: 24px;
+    height: 24px;
+    flex-basis: 24px;
+  }
+  .airline-mark img {
+    width: 24px;
+    height: 24px;
   }
   .traffic-footer {
     padding: 10px;
@@ -1074,4 +1153,17 @@ body:has(#film:not(.hidden)) #imagery-credit {
   to {
     transform: translateX(180px);
   }
+}
+
+@media (min-width: 701px) {
+  #shift-report {
+    left: 36px;
+    transform: translateY(-50%);
+  }
+}
+.flight-info {
+  min-width: 0;
+}
+.flight-info small {
+  overflow-wrap: anywhere;
 }

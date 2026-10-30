@@ -26,7 +26,9 @@ No API keys, server, live flight feed, tracking or paid assets are required. Fon
 2. Clear **27R** (north) or **27L** (south). The aircraft joins a descending final approach and rolls out after touchdown.
 3. Use **Hold** to delay an arrival, or **Go around** to cancel a clearance and climb away.
 4. For Flight Control-style free routing, select **Draw route**, drag a vector path in the overhead view, then assign a runway to append its approach.
-5. A safe arrival earns 100 points. A separation loss costs 50 points; three losses end the shift. Use the restart arrow for a new shift.
+5. Switch to **Departures**. Aircraft wait at the holding points until you clear a runway for takeoff. They taxi, line up, accelerate, rotate and climb out; a safe handoff earns 100 points. Amber runway buttons warn about traffic on the runway or short final. A clearance is your decision: warnings do not prevent unsafe releases.
+6. Arrivals replenish every 40 simulated seconds and departures every 32, subject to a workload cap of seven arrivals and four departures. Traffic continues for as long as you keep the shift safe. Aircraft cannot wait forever: an arrival diverts after eight simulated minutes; an uncleared departure cancels after six.
+7. Each safe arrival or departure earns 100 points. Separation losses, conflicting runway use, diversions and cancellations cost a strike and 50 points. Three strikes end the shift. A mid-air or runway collision ends it immediately, with a visible incident and a shift report. Use **Try another shift** to restart.
 
 The first arrival is aligned with 27L and makes a good first landing. Avoid clearing nearby flights onto the same final. The alert monitor uses a deliberately compressed game threshold of **450 m horizontally and 90 m vertically**; this is not an operational separation standard. Runway selection is free-play, rather than Heathrow's actual segregated arrival/departure procedure.
 
@@ -43,7 +45,7 @@ The first arrival is aligned with 27L and makes a good first landing. Avoid clea
 | Golden hour button | Golden hour / daylight / blue hour |
 | 1× button | Cycle simulation speed |
 
-The base game clock advances two simulated seconds per real second. Traffic, weather, callsigns and origins are fictional scenario data. The displayed clock is scenario UTC, not wall-clock time. Browser speech synthesis availability and voices vary by device.
+The base game clock advances two simulated seconds per real second. Traffic, weather, callsigns, origins and destinations are fictional scenario data. The displayed clock is scenario UTC, not wall-clock time. Browser speech synthesis availability and voices vary by device.
 
 ## What's modelled
 
@@ -55,13 +57,14 @@ The base game clock advances two simulated seconds per real second. Traffic, wea
 - Bundled CC0 photographic skies and asphalt/concrete/grass PBR textures; world-space material blending, roughness and normal maps, reflective glazing with procedural interior detail, brushed roof seams, HDR bloom, colour grading, MSAA, directional shadows and three lighting moods.
 - Five camera sequences: airport reveal, arrival chase, Terminal 5 flyby, tower view and closing orbit.
 
-This is a visual game, **not a flight dynamics or operational ATC trainer**. It does not implement real approach procedures, wake categories, real traffic, departure clearances or a taxiway-routing controller. Heathrow, NATS and the airlines do not endorse this project.
+This is a visual game, **not a flight dynamics or operational ATC trainer**. It does not implement real approach procedures, wake categories, real traffic or a full taxiway-routing controller. Heathrow, NATS and the airlines do not endorse this project.
 
 ## Validation and capture
 
 ```sh
 npm test                        # deterministic simulation tests
 node scripts/e2e.mjs            # Chromium desktop + mobile interaction checks
+node scripts/traffic-e2e.mjs    # airline logos, departures, collisions and restart
 # In another terminal: npm run preview -- --port 4173
 npm run capture                 # 1280×720 / 24 fps / 30-second H.264 MP4
 ```

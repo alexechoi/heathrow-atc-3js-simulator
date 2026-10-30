@@ -75,7 +75,7 @@
       </header>
       <div class="weather">
         <span class="eyebrow">LONDON HEATHROW</span>
-        <h1>Evening arrivals.</h1>
+        <h1>London never stops.</h1>
         <div class="weather-line">
           <span>☀ 17°</span><span>270° / 08 KT</span><span>VIS 10 KM</span>
         </div>
@@ -97,8 +97,15 @@
       </div>
       <aside class="traffic panel">
         <div class="panel-heading">
-          <span>INBOUND TRAFFIC</span
+          <span>AIRPORT TRAFFIC</span
           ><span id="traffic-count" class="pill">05</span>
+        </div>
+        <div class="traffic-tabs">
+          <button id="arrival-tab" data-traffic="arrival" class="active">
+            Arrivals</button
+          ><button id="departure-tab" data-traffic="departure">
+            Departures
+          </button>
         </div>
         <div class="traffic-columns">
           <span>CALLSIGN / ORIGIN</span><span>ALT / STATUS</span>
@@ -113,8 +120,8 @@
         <div class="eyebrow accent">YOU HAVE THE AIRSPACE.</div>
         <h2>Two runways.<br />One controller.</h2>
         <p>
-          Bring the world into London. Guide arrivals,<br />sequence your
-          approaches, and keep them apart.
+          Keep London moving. Land arrivals, release departures,<br />and keep
+          both runways safe. The traffic never stops.
         </p>
         <div class="intro-actions">
           <button id="start" class="primary">
@@ -137,16 +144,28 @@
           <span class="eyebrow">LANDED</span><strong id="landed">00</strong>
         </div>
         <div>
+          <span class="eyebrow">DEPARTED</span><strong id="departed">00</strong>
+        </div>
+        <div>
           <span class="eyebrow">SCORE</span><strong id="score">0000</strong>
         </div>
         <div>
-          <span class="eyebrow">LOSSES</span><strong id="strikes">0 / 3</strong>
+          <span class="eyebrow">STRIKES</span
+          ><strong id="strikes">0 / 3</strong>
         </div>
         <button id="restart" title="Restart shift">↻</button>
       </section>
       <section id="command" class="panel hidden">
         <div class="panel-heading">
-          <span id="selected-title">BAW283</span
+          <span class="selected-flight"
+            ><span class="airline-mark"
+              ><img
+                id="selected-logo"
+                src="/assets/airlines/BA.png"
+                alt="British Airways"
+                width="32"
+                height="32" /></span
+            ><span id="selected-title">BAW283</span></span
           ><span id="selected-type" class="muted">B789 · HEAVY</span>
         </div>
         <div id="command-hint">Assign a runway to sequence the approach.</div>
@@ -174,9 +193,22 @@
         </div>
       </section>
       <div id="tip" class="tip hidden">
-        Select a flight → assign a runway. Keep the final approach clear.
+        Arrivals & departures → check runway traffic → clear a flight.
       </div>
       <div id="toast" role="status"></div>
+      <section
+        id="shift-report"
+        class="panel hidden"
+        role="alertdialog"
+        aria-labelledby="shift-title"
+        aria-describedby="shift-reason"
+      >
+        <span class="eyebrow">CONTROL LOST</span>
+        <h2 id="shift-title">Shift ended.</h2>
+        <p id="shift-reason"></p>
+        <p id="shift-result"></p>
+        <button id="retry-shift" class="primary">Try another shift</button>
+      </section>
       <footer>
         <div class="location">
           <span class="cross">＋</span><span>51°28′39″N &nbsp; 000°27′41″W</span
@@ -224,12 +256,14 @@
       <h2>Your airspace.<br />Your call.</h2>
       <p>
         Select an aircraft in the sky or the traffic list. Assign <b>27R</b> or
-        <b>27L</b> to clear it onto a stabilised approach.
+        <b>27L</b> to clear an arrival to land or a departure to take off. Each
+        safe landing or departure earns 100 points.
       </p>
       <ol>
         <li>
-          <b>Sequence arrivals.</b> Leave room between aircraft on the same
-          final. Use Hold to delay an arrival.
+          <b>Continuous arrivals and departures.</b> Switch traffic tabs. Clear
+          arrivals to land; release departures only when the runway and final
+          are clear. Use Hold or Go around to make a gap.
         </li>
         <li>
           <b>Draw your own vectors.</b> Click Draw route, then drag a path in
@@ -237,9 +271,12 @@
           approach.
         </li>
         <li>
-          <b>Keep them separated.</b> Red alerts mean aircraft are within the
-          game's compressed 450 m horizontal / 90 m vertical limit. Three losses
-          end your shift.
+          <b>Mistakes have consequences.</b> Collisions end your shift
+          immediately. Runway conflicts, separation losses, fuel diversions and
+          excessive departure delays count as strikes; three strikes end the
+          shift. <b>Keep them separated.</b> Red alerts mean aircraft are within
+          the game's compressed 450 m horizontal / 90 m vertical limit. Three
+          losses end your shift.
         </li>
         <li>
           <b>Go around.</b> Cancel an approach and climb away when things get

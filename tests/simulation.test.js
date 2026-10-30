@@ -56,7 +56,7 @@ test("a persistent conflict counts once, three distinct losses end the shift", (
   const s = new Simulation();
   s.planes = [
     s.planes[0],
-    { ...s.planes[0], id: "TEST2", route: [], x: s.planes[0].x + 50 },
+    { ...s.planes[0], id: "TEST2", route: [], x: s.planes[0].x + 200 },
   ];
   s.spawnAt = Infinity;
   s.tick(0.1);
@@ -78,4 +78,125 @@ test("runway points descend and finish west of threshold", () => {
     assert.ok(p.every((v, i) => !i || v.y <= p[i - 1].y));
     assert.ok(p.at(-1).x < p[0].x);
   }
+});
+
+test("departure taxis, lines up, accelerates, climbs and scores once on handoff", () => {
+  const s = new Simulation();
+  const p = s.planes.find((p) => p.kind === "departure");
+  s.planes = [p];
+  s.spawnAt = s.departureAt = Infinity;
+  assert.equal(s.clear(p, "27R"), true);
+  assert.equal(p.state, "taxiing");
+  assert.equal(s.clear(p, "27L"), false);
+  const stages = new Set();
+  for (let i = 0; i < 1500; i++) {
+    s.tick(0.1);
+    stages.add(p.state);
+  }
+  for (const stage of ["taxiing", "lineup", "takeoff", "departure", "departed"])
+    assert.ok(stages.has(stage), stage);
+  assert.equal(s.departed, 1);
+  assert.equal(s.score, 100);
+  assert.ok(p.y > 500);
+  advance(s, 10);
+  assert.equal(s.score, 100);
+});
+test("uncleared departures stay behind the holding point", () => {
+  const s = new Simulation(),
+    p = s.planes.find((p) => p.kind === "departure");
+  s.planes = [p];
+  s.spawnAt = s.departureAt = Infinity;
+  const { x, z } = p;
+  advance(s, 90);
+  assert.equal(p.state, "holding-short");
+  assert.equal(p.x, x);
+  assert.equal(p.z, z);
+  assert.equal(
+    s.vector(p, [
+      { x: 0, z: 0 },
+      { x: 100, z: 0 },
+    ]),
+    false,
+  );
+  assert.equal(s.goAround(p), false);
+});
+test("runway occupancy warns on clearance and conflicting lineup costs a strike", () => {
+  const s = new Simulation(),
+    p = s.planes.find((p) => p.kind === "departure");
+  const a = s.planes[0];
+  Object.assign(a, {
+    x: 1200,
+    y: 5,
+    z: -710,
+    state: "rollout",
+    runway: "27R",
+    route: [{ x: -1000, y: 5, z: -710 }],
+    speed: 15,
+  });
+  s.planes = [p, a];
+  s.spawnAt = s.departureAt = Infinity;
+  assert.equal(s.clear(p, "27R"), true);
+  assert.match(s.events.at(-1), /WARNING/);
+  advance(s, 43);
+  assert.equal(s.strikes, 1);
+  assert.equal(s.over, false);
+  assert.equal(s.runwayConflicts.size, 1);
+});
+test("mid-air and runway collisions end the shift immediately", () => {
+  for (const y of [5, 400]) {
+    const s = new Simulation(),
+      a = s.planes[0];
+    Object.assign(a, {
+      x: 0,
+      z: 0,
+      y,
+      state: y === 5 ? "rollout" : "inbound",
+      speed: 0,
+      route: [],
+    });
+    const b = { ...a, id: "COLLISION", x: 20, route: [] };
+    s.planes = [a, b];
+    s.tick(0.1);
+    assert.equal(s.over, true);
+    assert.equal(a.state, "crashed");
+    assert.equal(b.state, "crashed");
+    assert.match(s.reason, y === 5 ? /runway collision/ : /mid-air collision/);
+    const t = s.time;
+    s.tick(10);
+    assert.equal(s.time, t);
+    s.reset();
+    assert.equal(s.over, false);
+    assert.equal(s.incident, null);
+  }
+});
+test("continuous arrival and departure streams replenish for a long shift without leaking history", () => {
+  const s = new Simulation();
+  let arrivals = 0,
+    departures = 0;
+  const ids = new Set();
+  // Emulate completed movements so that capacity keeps freeing across an hour.
+  for (let t = 0; t < 3600; t++) {
+    for (const p of s.planes)
+      if (!ids.has(p.id)) {
+        ids.add(p.id);
+        p.kind === "departure" ? departures++ : arrivals++;
+        s.finish(p, p.kind === "departure" ? "departed" : "landed");
+      }
+    s.tick(1);
+  }
+  assert.ok(arrivals > 80);
+  assert.ok(departures > 100);
+  assert.equal(s.over, false);
+  assert.ok(s.planes.length < 15);
+  assert.ok(s.events.length <= 40);
+});
+test("ignored traffic eventually diverts or cancels and three delays lose the shift", () => {
+  const s = new Simulation();
+  s.planes = s.planes.filter((p) => p.kind === "departure");
+  s.spawnDeparture("27R");
+  s.spawnAt = s.departureAt = Infinity;
+  advance(s, 361);
+  assert.equal(s.over, true);
+  assert.equal(s.strikes, 3);
+  assert.ok(s.planes.every((p) => p.state === "cancelled"));
 });

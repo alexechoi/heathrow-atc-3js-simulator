@@ -37,3 +37,7 @@ The following original 1K JPG diffuse, OpenGL normal and roughness maps are bund
 - [Slop New York](https://github.com/mrdoob/slop-newyork/), mrdoob and contributors: reference for layered procedural materials, HDR grading, bloom and geographic scene construction. No source code was copied into this project's original shaders.
 
 - [Concrete Floor 02](https://polyhaven.com/a/concrete_floor_02), Poly Haven, CC0: apron diffuse, normal and roughness maps. Used separately from the board-formed concrete wall material.
+
+## Airline identification
+
+`public/assets/airlines/{BA,VS,EK,SQ}.png`: British Airways, Virgin Atlantic, Emirates and Singapore Airlines logos, retrieved from `https://images.kiwi.com/airlines/64/{code}.png` for traffic identification. Airline artwork and trademarks belong to their respective owners and are excluded from the application’s Apache-2.0 licence. No endorsement is implied.

@@ -6,12 +6,19 @@ import { loadGeography, IMAGERY_CREDIT } from "./geography.js";
 import { loadMaterials, materialState } from "./materials.js";
 import { createPostProcessing } from "./postprocessing.js";
 import { aircraft } from "./aircraft.js";
-import { Simulation, RUNWAYS } from "./simulation.js";
+import { Simulation, RUNWAYS, FINISHED } from "./simulation.js";
 import "@fontsource-variable/dm-sans";
 import "@fontsource-variable/space-grotesk";
 import "./style.css";
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
+const AIRLINES = {
+  BA: "British Airways",
+  VS: "Virgin Atlantic",
+  EK: "Emirates",
+  SQ: "Singapore Airlines",
+};
+let trafficFilter = "arrival";
 const canvas = $("#world");
 let renderer;
 try {
@@ -188,10 +195,11 @@ function speak(text) {
   window.speechSynthesis.speak(u);
 }
 function selected() {
-  return sim.planes.find((p) => p.id === selectedId && p.state !== "landed");
+  return sim.planes.find((p) => p.id === selectedId && !FINISHED.has(p.state));
 }
 function select(id) {
   selectedId = id;
+  trafficFilter = sim.planes.find((p) => p.id === id)?.kind || "arrival";
   if (!playing) start(false);
   $("#command").classList.remove("hidden");
   updateUI();
@@ -199,6 +207,7 @@ function select(id) {
 function start(reset = true) {
   if (reset) {
     sim.reset(false);
+    trafficFilter = "arrival";
     selectedId = sim.planes[0].id;
     clearModels();
   }
@@ -213,7 +222,9 @@ function start(reset = true) {
   $("#command").classList.remove("hidden");
   $("#tip").classList.remove("hidden");
   $("#mode-label").textContent = "YOU HAVE CONTROL";
-  toast("Heathrow tower: select an arrival and assign a runway.");
+  toast("Heathrow tower: arrivals and departures are on your frequency.");
+  $("#shift-report").classList.add("hidden");
+  clearIncident();
   updateUI();
 }
 function clearModels() {
@@ -392,7 +403,7 @@ function cinema(t) {
 function updateModels(dt) {
   const active = new Set();
   for (const p of sim.planes) {
-    if (p.state === "landed") continue;
+    if (FINISHED.has(p.state)) continue;
     active.add(p.id);
     let m = models.get(p.id);
     if (!m) {
@@ -408,7 +419,8 @@ function updateModels(dt) {
     }
     m.position.set(p.x, p.y, p.z);
     m.rotation.set(0, -p.heading, 0);
-    m.rotateX(p.bank || 0);
+    m.rotateX(p.state === "crashed" ? 1.2 : p.bank || 0);
+    m.rotateZ(p.pitch || 0);
     const gear = m.getObjectByName("gear");
     if (gear) gear.visible = p.y < 110;
     const nav = m.getObjectByName("nav");
@@ -444,7 +456,7 @@ function redrawRoutes() {
   }
   if (cinematic) return;
   for (const p of sim.planes) {
-    if (p.state === "landed") continue;
+    if (FINISHED.has(p.state)) continue;
     if (p.trail.length > 1) {
       routeGroup.add(
         new T.Line(new T.BufferGeometry().setFromPoints(p.trail), trailMat),
@@ -473,40 +485,104 @@ function redrawRoutes() {
     );
 }
 function updateUI() {
-  const active = sim.planes.filter((p) => p.state !== "landed");
+  const active = sim.planes.filter((p) => !FINISHED.has(p.state));
+  const arrivals = active.filter((p) => p.kind !== "departure");
+  const departures = active.filter((p) => p.kind === "departure");
   $("#traffic-count").textContent = String(active.length).padStart(2, "0");
-  $("#flight-list").innerHTML = active
-    .slice(0, 7)
-    .map(
-      (p) =>
-        `<button class="flight-row ${p.id === selectedId ? "selected" : ""}" data-flight="${p.id}"><span class="airline-mark">${p.airline}</span><span class="flight-info"><b>${p.id}</b><small>${p.origin} · ${p.type}</small></span><span class="flight-data">${Math.round((p.y * 3.281) / 100) * 100}<small class="${[...sim.conflicts].some((c) => c.includes(p.id)) ? "alert" : ""}">${p.runway ? `${p.state === "rollout" ? "LANDED" : "ILS"} ${p.runway}` : p.state.toUpperCase()}</small></span></button>`,
-    )
-    .join("");
+  $("#arrival-tab").textContent = `Arrivals ${arrivals.length}`;
+  $("#departure-tab").textContent = `Departures ${departures.length}`;
+  $$("[data-traffic]").forEach((b) =>
+    b.classList.toggle("active", b.dataset.traffic === trafficFilter),
+  );
+  const listed = trafficFilter === "departure" ? departures : arrivals;
+  $("#flight-list").innerHTML =
+    listed
+      .map((p) => {
+        const alert = [...sim.conflicts, ...sim.runwayConflicts].some((c) =>
+          c.split("/").includes(p.id),
+        );
+        const status =
+          p.state === "holding-short"
+            ? "HOLD SHORT"
+            : p.state === "approach"
+              ? `ILS ${p.runway}`
+              : p.state.replaceAll("-", " ").toUpperCase();
+        return `<button class="flight-row ${p.id === selectedId ? "selected" : ""}" data-flight="${p.id}"><span class="airline-mark" title="${AIRLINES[p.airline]}"><img src="/assets/airlines/${p.airline}.png" alt="${AIRLINES[p.airline]}" width="32" height="32"></span><span class="flight-info"><b>${p.id}</b><small>${p.kind === "departure" ? "To " : ""}${p.origin} · ${p.type}</small></span><span class="flight-data">${p.y < 15 ? p.runway || "GROUND" : Math.round((p.y * 3.281) / 100) * 100}<small class="${alert ? "alert" : ""}">${alert ? "CONFLICT" : status}</small></span></button>`;
+      })
+      .join("") || '<p class="traffic-empty">Next flight is on its way.</p>';
   $$("[data-flight]").forEach(
     (b) => (b.onclick = () => select(b.dataset.flight)),
   );
   $("#landed").textContent = String(sim.landed).padStart(2, "0");
+  $("#departed").textContent = String(sim.departed).padStart(2, "0");
   $("#score").textContent = String(sim.score).padStart(4, "0");
   $("#strikes").textContent = `${sim.strikes} / 3`;
-  $("#separation-status").textContent = sim.conflicts.size
-    ? "LOSS OF SEPARATION"
-    : "SEPARATION MONITOR ACTIVE";
-  $("#separation-status").style.color = sim.conflicts.size ? "#ffa494" : "";
+  const alert = sim.conflicts.size || sim.runwayConflicts.size;
+  if (playing)
+    $("#mode-label").textContent = sim.over
+      ? "SHIFT ENDED"
+      : "YOU HAVE CONTROL";
+  $("#separation-status").textContent = sim.over
+    ? "SHIFT ENDED"
+    : alert
+      ? "TRAFFIC CONFLICT"
+      : "CONTINUOUS TRAFFIC ACTIVE";
+  $("#separation-status").style.color = alert || sim.over ? "#ffa494" : "";
+  if (!selected() && active.length) selectedId = (listed[0] || active[0]).id;
   const p = selected();
+  $("#command").classList.toggle("hidden", !playing || !p || sim.over);
   if (p) {
+    const departure = p.kind === "departure";
+    const controllable =
+      !sim.over &&
+      (departure
+        ? p.state === "holding-short"
+        : !["rollout", "crashed"].includes(p.state));
     $("#selected-title").textContent = p.id;
+    $("#selected-logo").src = `/assets/airlines/${p.airline}.png`;
+    $("#selected-logo").alt = AIRLINES[p.airline];
     $("#selected-type").textContent =
-      `${p.type} · ${p.type === "A320" ? "MEDIUM" : "HEAVY"}`;
-    $("#command-hint").textContent = drawing
-      ? "Drag a route across the map, then assign a runway."
-      : p.runway
-        ? `Cleared ${p.runway}. Monitor spacing on final approach.`
-        : p.state === "holding"
-          ? "Holding. Assign a runway when the final is clear."
-          : "Assign a runway to sequence the approach.";
-  } else if (playing && active.length) {
-    selectedId = active[0].id;
+      `${departure ? "DEP" : "ARR"} · ${p.type}`;
+    $("#command-hint").textContent = departure
+      ? p.state === "holding-short"
+        ? `To ${p.destination}. Check the runway before releasing.`
+        : `${p.state.replaceAll("-", " ").toUpperCase()} · ${p.runway} · ${Math.round(p.speed * 1.944)} KT`
+      : drawing
+        ? "Drag a route, then assign a runway."
+        : p.runway
+          ? `Cleared ${p.runway}. Keep the runway and final clear.`
+          : `Fuel reserve in ${Math.max(0, Math.ceil((480 - p.age) / 60))} sim min. Assign a runway or hold.`;
+    $$("[data-runway]").forEach((b) => {
+      const occupied = sim.runwayTraffic(b.dataset.runway, p).length;
+      b.disabled = !controllable;
+      b.classList.toggle("occupied", !!occupied);
+      b.querySelector("b").textContent = departure
+        ? "CLEAR TAKEOFF"
+        : "CLEAR TO LAND";
+      b.querySelector("small").textContent = occupied
+        ? "⚠ TRAFFIC ON RUNWAY / FINAL"
+        : `${b.dataset.runway === "27R" ? "NORTH" : "SOUTH"} · RUNWAY AVAILABLE`;
+    });
+    $("#hold").textContent = departure ? "Hold short" : "↻ Hold";
+    $("#hold").disabled = !controllable;
+    $("#go-around").disabled = departure || !controllable;
+    $("#draw").disabled = departure || !controllable;
   }
+  $("#shift-report").classList.toggle("hidden", !sim.over || cinematic);
+  if (sim.over) {
+    $("#shift-reason").textContent = sim.reason;
+    $("#shift-result").textContent =
+      `${sim.landed} landed · ${sim.departed} departed · ${sim.score} points`;
+  }
+  if (playing && p && !sim.over) {
+    const list = $("#flight-list");
+    const available =
+      $("#command").getBoundingClientRect().top -
+      list.getBoundingClientRect().top -
+      $(".traffic-footer").offsetHeight -
+      14;
+    list.style.maxHeight = `${Math.max(50, available)}px`;
+  } else $("#flight-list").style.maxHeight = "";
   $("#clock").textContent =
     new Date(Date.UTC(2026, 5, 21, 17, 42, sim.time))
       .toISOString()
@@ -514,6 +590,7 @@ function updateUI() {
 }
 function command(id) {
   if (!playing) start();
+  if (sim.over) return;
   const p = selected();
   if (!p) return;
   if (id === "hold") sim.hold(p);
@@ -531,6 +608,19 @@ function command(id) {
   document.body.classList.remove("drawing");
   updateUI();
 }
+$$("[data-traffic]").forEach(
+  (b) =>
+    (b.onclick = () => {
+      trafficFilter = b.dataset.traffic;
+      const p = sim.planes.find(
+        (p) =>
+          !FINISHED.has(p.state) && (p.kind || "arrival") === trafficFilter,
+      );
+      if (p && playing) selectedId = p.id;
+      updateUI();
+    }),
+);
+$("#retry-shift").onclick = () => start();
 $("#start").onclick = () => start();
 $("#restart").onclick = () => start();
 $("#cinematic").onclick = enterFilm;
@@ -650,6 +740,50 @@ window.addEventListener("resize", () => {
   post.resize(innerWidth, innerHeight);
 });
 renderer.info.autoReset = false;
+const incidentGroup = new T.Group();
+scene.add(incidentGroup);
+let shownIncident = null;
+function clearIncident() {
+  shownIncident = null;
+  for (const mesh of [...incidentGroup.children]) {
+    incidentGroup.remove(mesh);
+    mesh.geometry.dispose();
+    mesh.material.dispose();
+  }
+}
+function updateIncident() {
+  if (sim.incident && sim.incident !== shownIncident) {
+    clearIncident();
+    shownIncident = sim.incident;
+    selectedId = sim.incident.flights[0];
+    setView("follow");
+    incidentGroup.position.set(sim.incident.x, sim.incident.y, sim.incident.z);
+    for (let i = 0; i < 22; i++) {
+      const smoke = i > 5;
+      const mesh = new T.Mesh(
+        new T.IcosahedronGeometry(smoke ? 17 + i : 14, 1),
+        new T.MeshBasicMaterial({
+          color: smoke ? 0x25282b : i % 2 ? 0xff5b0a : 0xffb334,
+          transparent: true,
+          opacity: smoke ? 0.65 : 0.9,
+          depthWrite: false,
+        }),
+      );
+      mesh.position.set(
+        Math.sin(i * 2.4) * i * 2,
+        i * 7,
+        Math.cos(i * 2.4) * i * 2,
+      );
+      incidentGroup.add(mesh);
+    }
+  }
+  incidentGroup.visible = !!sim.incident;
+  incidentGroup.children.forEach((m, i) => {
+    m.rotation.y = elapsed * 0.15 + i;
+    const pulse = 1 + Math.sin(elapsed * 3 + i) * 0.08;
+    m.scale.setScalar(pulse);
+  });
+}
 function renderScene() {
   renderer.info.reset();
   post.render();
@@ -683,6 +817,7 @@ function step(dt) {
     controls.update();
   } else controls.update();
   updateModels(dt);
+  updateIncident();
   if (frameCounter % 6 === 0) redrawRoutes();
   uiTimer += dt;
   if (uiTimer > 0.35) {
@@ -748,6 +883,8 @@ window.__HEATHROW__ = {
         route: p.route.length,
       })),
       landed: sim.landed,
+      departed: sim.departed,
+      over: sim.over,
       score: sim.score,
       strikes: sim.strikes,
       drawCalls: renderer.info.render.calls,
