@@ -314,3 +314,99 @@ test("a drawn route with tight samples makes forward progress instead of orbitin
     "Completed vector leads to external hold",
   );
 });
+
+test("stack levels remain separated when a lower flight is cleared and replaced", () => {
+  const s = new Simulation(),
+    base = { ...s.planes[0] };
+  s.planes = [];
+  s.spawnAt = s.departureAt = Infinity;
+  const add = (id) => {
+    const p = { ...base, id, route: [], trail: [] };
+    s.planes.push(p);
+    s.placeInHold(p, 0);
+    return p;
+  };
+  const low = add("LOW"),
+    middle = add("MID"),
+    high = add("HIGH");
+  assert.deepEqual(
+    [low, middle, high].map((p) => Math.round(p.y / 0.3048)),
+    [6000, 7000, 8000],
+  );
+  s.clear(low, "27L");
+  const replacement = add("REPLACEMENT");
+  assert.equal(
+    Math.round(replacement.y / 0.3048),
+    9000,
+    "cleared traffic still occupies its level while inside the stack",
+  );
+  low.x = 0;
+  low.z = 0;
+  const lowerReplacement = add("LOWER-REPLACEMENT");
+  assert.equal(
+    Math.round(lowerReplacement.y / 0.3048),
+    6000,
+    "reuse a level after its previous occupant leaves the stack",
+  );
+  advance(s, 5);
+  assert.equal(s.over, false);
+  assert.equal(s.strikes, 0);
+});
+
+test("aircraft travelling to a hold reserve a level and repeated hold instructions retain it", () => {
+  const s = new Simulation(),
+    p = s.planes[0];
+  s.planes = [p];
+  Object.assign(p, { x: -6500, z: -7000, y: 1200 });
+  s.hold(p);
+  const assigned = p.holdAltitude,
+    route = p.route;
+  assert.equal(Math.round(assigned / 0.3048), 6000);
+  s.hold(p);
+  assert.equal(p.holdAltitude, assigned);
+  assert.equal(p.route, route);
+  const incoming = { ...p, id: "NEXT", route: [], trail: [] };
+  s.planes.push(incoming);
+  s.placeInHold(incoming, 0);
+  assert.equal(
+    Math.round(incoming.y / 0.3048),
+    7000,
+    "reserve against the target level, not just current altitude",
+  );
+});
+
+test("continuous departures complete thirty minutes of ground/tower/departure handovers without deadlock", () => {
+  const s = new Simulation();
+  s.planes = s.planes.filter((p) => p.kind === "departure");
+  s.spawnAt = Infinity;
+  for (let i = 0; i < 18000 && !s.over; i++) {
+    for (const p of s.planes) {
+      if (p.state === "at-gate") s.pushback(p);
+      if (p.state === "await-taxi") s.taxi(p);
+      if (
+        p.state === "await-tower" ||
+        (p.state === "departure" && p.y >= 250 && !p.handedOff)
+      )
+        s.handoff(p);
+      if (p.state === "holding-short" && !s.runwayTraffic(p.runway, p).length)
+        s.clear(p, p.runway);
+    }
+    s.tick(0.1);
+  }
+  assert.equal(s.over, false);
+  assert.equal(s.strikes, 0);
+  assert.ok(s.departed >= 25, `Throughput: ${s.departed} departures`);
+  assert.ok(
+    s.planes.some((p) => ["at-gate", "pushback", "taxiing"].includes(p.state)),
+    "new ground traffic is still being supplied",
+  );
+});
+
+test("rejoining a hold at exactly 7,000 ft preserves the available level", () => {
+  const s = new Simulation(),
+    p = s.planes[0];
+  s.planes = [p];
+  Object.assign(p, { x: -6500, z: -7000, y: 7000 * 0.3048 });
+  s.hold(p);
+  assert.equal(Math.round(p.holdAltitude / 0.3048), 7000);
+});

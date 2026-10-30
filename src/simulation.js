@@ -12,6 +12,9 @@ export const HOLDING_AREAS = [
   { name: "BIGGIN", x: 8500, z: 7500 },
   { name: "OCKHAM", x: -6000, z: 8500 },
 ];
+// Scenario stack levels: 6,000 ft base, 1,000 ft between aircraft.
+export const HOLD_BASE_ALTITUDE = 6000 * 0.3048;
+export const HOLD_LEVEL_SPACING = 1000 * 0.3048;
 function racetrack(p) {
   const radius = 700,
     leg = 1600,
@@ -305,6 +308,7 @@ export class Simulation {
     p.routeStart ??= { x: p.x, y: p.y, z: p.z };
     p.state = "approach";
     p.holdName = null;
+    p.holdAltitude = null;
     p.controller = "TOWER";
     p.runway = id;
     this.events.push(
@@ -312,13 +316,42 @@ export class Simulation {
     );
     return true;
   }
+  reserveHoldAltitude(p, area, minimum = HOLD_BASE_ALTITUDE) {
+    const traffic = this.planes.filter(
+      (q) =>
+        q !== p &&
+        !FINISHED.has(q.state) &&
+        q.state !== "crashed" &&
+        (q.holdName === area.name ||
+          (Math.abs(q.x - area.x) < 2000 && Math.abs(q.z - area.z) < 1200)),
+    );
+    let level = Math.max(
+      0,
+      Math.ceil((minimum - HOLD_BASE_ALTITUDE) / HOLD_LEVEL_SPACING - 1e-9),
+    );
+    let altitude;
+    do {
+      altitude = HOLD_BASE_ALTITUDE + level++ * HOLD_LEVEL_SPACING;
+    } while (
+      traffic.some((q) =>
+        [
+          q.y,
+          ...(q.holdName === area.name && q.holdAltitude != null
+            ? [q.holdAltitude]
+            : []),
+        ].some(
+          (occupied) => Math.abs(occupied - altitude) < HOLD_LEVEL_SPACING - 1,
+        ),
+      )
+    );
+    return altitude;
+  }
   placeInHold(p, index) {
     p.holdCenter = HOLDING_AREAS[index % 4];
     p.holdName = p.holdCenter.name;
-    const same = this.planes.filter(
-      (q) => q !== p && q.holdName === p.holdName && !FINISHED.has(q.state),
-    ).length;
-    p.y = 1200 + same * 320;
+    p.holdAltitude = this.reserveHoldAltitude(p, p.holdCenter);
+    p.y = p.holdAltitude;
+    p.controller = "APPROACH";
     p.speed = 105;
     p.holdDistance = 0;
     p.state = "holding";
@@ -339,6 +372,12 @@ export class Simulation {
       this.events.push(`${p.id}, hold short runway ${p.runway}.`);
       return true;
     }
+    if (["holding", "to-hold"].includes(p.state)) {
+      this.events.push(
+        `${p.id}, maintain ${p.holdName} hold at ${Math.round(p.holdAltitude / 0.3048)} feet.`,
+      );
+      return true;
+    }
     const area = HOLDING_AREAS.reduce((a, b) =>
       Math.hypot(a.x - p.x, a.z - p.z) < Math.hypot(b.x - p.x, b.z - p.z)
         ? a
@@ -349,10 +388,13 @@ export class Simulation {
     p.holdDistance = 0;
     p.runway = null;
     p.state = "to-hold";
-    const others = this.planes.filter(
-      (q) => q !== p && q.holdName === area.name && !FINISHED.has(q.state),
-    ).length;
-    const altitude = Math.max(1200, p.y, 1200 + others * 320);
+    const altitude = this.reserveHoldAltitude(
+      p,
+      area,
+      Math.max(HOLD_BASE_ALTITUDE, p.y),
+    );
+    p.holdAltitude = altitude;
+    p.controller = "APPROACH";
     p.route = [{ x: area.x - 800, y: altitude, z: area.z - 700 }];
     p.routeStart = { x: p.x, y: p.y, z: p.z };
     this.events.push(
@@ -375,6 +417,7 @@ export class Simulation {
     ];
     p.state = "go-around";
     p.holdName = null;
+    p.holdAltitude = null;
     p.routeStart = { x: p.x, y: p.y, z: p.z };
     p.runway = null;
     this.events.push(`${p.id}, go around. Climb and maintain 2,300 feet.`);
@@ -395,6 +438,7 @@ export class Simulation {
     p.routeStart = { x: p.x, y: p.y, z: p.z };
     p.state = "vectoring";
     p.holdName = null;
+    p.holdAltitude = null;
     p.controller = "APPROACH";
     p.runway = null;
     return true;
