@@ -64,3 +64,10 @@ Studio renders and in-airport screenshots were reviewed for both livery fit and 
 Ground paths are generated from the same mapped taxiway centrelines used to render the pavement. The generator joins coincident endpoints, excludes paths outside the central runway boundaries, and computes connected routes from reserved stand lead-ins to the mapped A1/N1 holding points. Active stands are removed from static parking. Tests check that taxi positions remain on the selected polyline, require a ground/tower handover before takeoff clearance, and verify the departure handoff. Stand assignments and runway-entry clearances are simplified game procedures.
 
 Four external racetracks replace local orbits above the airport. Their names and relative quadrants reference Heathrow's holding system; their coordinates, spacing, altitude and orientation are compressed game values. The radar overlay is a game diagram, not an aeronautical chart.
+
+### Reviewed screenshots
+
+- [Mapped taxiway movement](screenshots/mapped-taxi.jpg)
+- [External holding patterns on radar](screenshots/external-holds.jpg)
+- [787 geometry, painted wordmark and recessed intake](screenshots/787-livery.jpg)
+- [Animated flame and smoke particles](screenshots/incident-effects.jpg)

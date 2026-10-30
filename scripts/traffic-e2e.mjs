@@ -37,7 +37,7 @@ try {
   assert.equal(await p.locator(".flight-row").count(), 4);
   assert.match(
     await p.locator("#command-hint").textContent(),
-    /tower handover/i,
+    /transferring.*Tower/i,
   );
   assert.equal(await p.locator("#go-around").isDisabled(), true);
   await p.click("#ground-action");
