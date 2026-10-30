@@ -254,7 +254,7 @@ vec3 asphalt=texture2D(uAsphalt,vSurfaceWorld.xz/5.).rgb;
 diffuseColor.rgb*=mix(vec3(1.),clamp(asphalt*4.,.7,1.25),${concrete ? ".3" : ".6"});
 float repair=.95+.05*sin(vSurfaceWorld.x*.031)*sin(vSurfaceWorld.z*.43);
 diffuseColor.rgb*=repair;
-${concrete ? `vec2 slab=vSurfaceWorld.xz/5.;vec2 e=min(fract(slab),1.-fract(slab));vec2 aa=max(fwidth(slab),vec2(.0001));float joint=1.-smoothstep(.003,.003+aa.x,e.x)*smoothstep(.003,.003+aa.y,e.y);diffuseColor.rgb*=1.-joint*.19;float variation=fract(sin(dot(floor(slab),vec2(12.9898,78.233)))*43758.5453);diffuseColor.rgb*=.92+.12*variation;` : ""}
+${concrete ? `vec2 slab=vSurfaceWorld.xz/5.;vec2 e=min(fract(slab),1.-fract(slab));vec2 aa=max(fwidth(slab),vec2(.0001));float joint=1.-smoothstep(.003,.003+aa.x,e.x)*smoothstep(.003,.003+aa.y,e.y);diffuseColor.rgb*=1.-joint*.1;float variation=fract(sin(dot(floor(slab),vec2(12.9898,78.233)))*43758.5453);diffuseColor.rgb*=.96+.07*variation;` : ""}
 `,
       );
     },

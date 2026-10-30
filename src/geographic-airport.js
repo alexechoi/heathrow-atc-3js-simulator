@@ -46,6 +46,7 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     asphalt: runwayMaterial(0x77796f),
     apron: runwayMaterial(0x898b80, true),
     turf: turfMaterial(),
+    airfieldBase: turfMaterial(),
     rubber: new T.MeshStandardMaterial({
       color: 0x141a1a,
       roughness: 0.98,
@@ -74,6 +75,7 @@ export function buildGeographicAirport(scene, { data, near, far }) {
   // Give each ground layer a deterministic depth bias as well as its elevation.
   for (const [key, bias] of Object.entries({
     apron: 4,
+    airfieldBase: 5,
     turf: 3,
     asphalt: 2,
     runway: 1,
@@ -246,11 +248,11 @@ export function buildGeographicAirport(scene, { data, near, far }) {
         dz = (((bx - ax) / len) * width) / 2;
       for (const [x, z] of [
         [ax + dx, az + dz],
-        [ax - dx, az - dz],
-        [bx + dx, bz + dz],
         [bx + dx, bz + dz],
         [ax - dx, az - dz],
+        [bx + dx, bz + dz],
         [bx - dx, bz - dz],
+        [ax - dx, az - dz],
       ]) {
         positions.push(x, y, z);
         uv.push(x / 10, z / 10);
@@ -263,11 +265,18 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     g.computeVertexNormals();
     put(g, mat);
   }
+  // The playable airfield has modeled ground; imagery provides the geographic
+  // reference and distant surroundings, never a stretched close-range floor.
+  const airfieldOutline=[[-2290,-930],[2010,-940],[2170,-625],[2910,-600],[3070,-160],[2890,430],[2110,750],[1740,860],[1620,1400],[1260,1660],[530,1640],[260,1230],[-1390,1220],[-2190,950],[-2330,310],[-2380,-300]];
+  const airfieldSurface=new T.ShapeGeometry(shape(airfieldOutline));
+  airfieldSurface.rotateX(-Math.PI/2);put(airfieldSurface,"airfieldBase",0,.005,0);
   // Crisp mapped pavement outlines and narrow taxi/stand paint at close range.
   // OSM stand aprons stop at their operational boundary, leaving service roads
   // and terminal curtilages out. Pave those precincts, then restore mapped turf.
   for (const [x1, z1, x2, z2] of [
-    [-2040, -360, -900, 365],
+    [-2040, -390, -890, 375],
+    [-830,-395,1000,375],
+    [1790,-390,2830,440],
     [1075, -360, 1365, 335],
   ]) {
     const g = new T.PlaneGeometry(x2 - x1, z2 - z1);
@@ -288,10 +297,15 @@ export function buildGeographicAirport(scene, { data, near, far }) {
       put(g, "apron", 0, 0.025, 0);
     }
     if (a.kind === "taxiway") {
+      stripe(a.points,(a.width||23)+12,"apron",.024);
       stripe(a.points, a.width || 23, "asphalt", 0.03);
       stripe(a.points, 0.23, "yellow", 0.065);
     }
     if (a.kind === "parking_position") stripe(a.points, 0.18, "yellow", 0.07);
+  }
+  for(const r of data.roads){
+    if(r.kind!=="service"||r.points.some(([x,z])=>x< -2100||x>2850||z< -900||z>1550))continue;
+    stripe(r.points,6,"asphalt",.05);
   }
   // Urban buildings are extruded from real OSM footprints. OSM heights are used when available.
   const special = new Set([23231957, 23479613, 23479729, 294572024, 133146402]);
@@ -546,6 +560,7 @@ export function buildGeographicAirport(scene, { data, near, far }) {
       "apron",
       "yellow",
       "turf",
+      "airfieldBase",
     ].includes(key);
     mesh.receiveShadow = true;
     group.add(mesh);
