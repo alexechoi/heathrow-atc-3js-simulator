@@ -1,5 +1,5 @@
 // Deterministic game simulation. Metres, seconds, radians; deliberately compressed separation.
-export const RUNWAYS={'27R':{z:-710,threshold:1901,length:3902},'27L':{z:710,threshold:1710,length:3660}};
+export const RUNWAYS={'27R':{z:-710,threshold:1898,length:3902},'27L':{z:710,threshold:1844,length:3660}};
 export const SEPARATION={horizontal:450,vertical:90};
 export function separationConflict(a,b){return !['landed','rollout'].includes(a.state)&&!['landed','rollout'].includes(b.state)&&Math.hypot(a.x-b.x,a.z-b.z)<SEPARATION.horizontal&&Math.abs(a.y-b.y)<SEPARATION.vertical;}
 export function approachPoints(id){const r=RUNWAYS[id];return [{x:r.threshold+2300,y:180,z:r.z},{x:r.threshold+1200,y:85,z:r.z},{x:r.threshold+80,y:7,z:r.z},{x:r.threshold-1150,y:5,z:r.z}];}

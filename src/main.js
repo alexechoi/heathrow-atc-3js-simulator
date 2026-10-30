@@ -1,7 +1,10 @@
 import * as T from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
-import { buildAirport } from './airport.js';
+import { buildGeographicAirport } from './geographic-airport.js';
+import { loadGeography, IMAGERY_CREDIT } from './geography.js';
+import { loadMaterials, materialState } from './materials.js';
+import { createPostProcessing } from './postprocessing.js';
 import { aircraft } from './aircraft.js';
 import { Simulation, RUNWAYS } from './simulation.js';
 import '@fontsource-variable/dm-sans';
@@ -17,7 +20,7 @@ const controls=new OrbitControls(camera,canvas);controls.target.set(0,0,0);contr
 const hemi=new T.HemisphereLight(0xb1d4ef,0x514430,1.1);scene.add(hemi);
 const sun=new T.DirectionalLight(0xffc38b,3.1);sun.position.set(-5000,1600,-2600);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-2800,right:2800,top:2300,bottom:-2300,near:100,far:12000});sun.shadow.normalBias=2;sun.shadow.bias=-.0002;scene.add(sun);
 // CC0 photographic skies from Poly Haven. Both are bundled for offline-capable rendering.
-const hdrLoader=new HDRLoader();
+$('#loading-detail').textContent='Reading the weather and lighting the airfield…';const hdrLoader=new HDRLoader();
 const [sunsetHDR,dayHDR]=await Promise.all([hdrLoader.loadAsync('/assets/sunset.hdr'),hdrLoader.loadAsync('/assets/sky.hdr')]);
 for(const tex of [sunsetHDR,dayHDR])tex.mapping=T.EquirectangularReflectionMapping;
 scene.background=sunsetHDR;scene.backgroundIntensity=.7;scene.backgroundRotation.y=.7;
@@ -26,7 +29,7 @@ const atmosphere=new T.Mesh(new T.SphereGeometry(90000,32,16),new T.ShaderMateri
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
 }` }));scene.add(atmosphere);
-const airport=buildAirport(scene);const sim=new Simulation();sim.reset(true);
+$('#loading-detail').textContent='Loading surface materials and satellite imagery…';await loadMaterials();const geography=await loadGeography();$('#loading-detail').textContent='Opening the tower…';const airport=buildGeographicAirport(scene,geography);const post=createPostProcessing(renderer,scene,camera);document.querySelector('#imagery-credit').textContent=IMAGERY_CREDIT;document.querySelector('#imagery-credit').title=geography.near?'Live Esri satellite imagery, aligned to mapped Heathrow geometry.':'Imagery could not load; displaying mapped procedural surfaces.';const sim=new Simulation();sim.reset(true);
 let playing=false,selectedId=sim.planes[0].id,view='overview',paused=false,speed=1,cinematic=false,cinemaTime=0,day='golden',sound=false,drawing=false,drawPoints=[],lastTime=performance.now(),elapsed=0,uiTimer=0,toastTimer,frameCounter=0,fpsTime=0;
 const models=new Map(),labels=new Map();const routeGroup=new T.Group();scene.add(routeGroup);
 const routeMat=new T.LineBasicMaterial({color:0xc5edb6,transparent:true,opacity:.65});const trailMat=new T.LineBasicMaterial({color:0xe4eadb,transparent:true,opacity:.22});
@@ -39,20 +42,20 @@ function select(id){selectedId=id;if(!playing)start(false);$('#command').classLi
 function start(reset=true){if(reset){sim.reset(false);selectedId=sim.planes[0].id;clearModels();}playing=true;document.body.classList.add('playing');sim.demo=false;if(reset)setView('overview');paused=false;$('#pause').innerHTML='<i class="pause-icon"></i>';$('#intro').classList.add('hidden');$('#game-stats').classList.remove('hidden');$('#command').classList.remove('hidden');$('#tip').classList.remove('hidden');$('#mode-label').textContent='YOU HAVE CONTROL';toast('Heathrow tower: select an arrival and assign a runway.');updateUI();}
 function clearModels(){for(const m of models.values())scene.remove(m);models.clear();for(const l of labels.values())l.remove();labels.clear();}
 function setView(v){view=v;controls.enabled=!cinematic;drawing=false;document.body.classList.remove('drawing');$$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));const p=selected()||sim.planes[0];if(v==='overview'){camera.position.set(2900,1500,2900);controls.target.set(-160,0,-130);}if(v==='radar'){camera.position.set(1000,10500,1);controls.target.set(1000,0,0);}if(v==='tower'){camera.position.copy(airport.tower).add(new T.Vector3(0,4,0));controls.target.set(p.x,p.y,p.z);}if(v==='follow'){camera.position.set(p.x+125,p.y+70,p.z+145);controls.target.set(p.x,p.y,p.z);}controls.update();}
-function setDay(){day=day==='golden'?'day':day==='day'?'night':'golden';const configs={golden:[0xffc38b,3.1,2.3,.85,0xbac8cb,2700],day:[0xfff2d7,3,3,.9,0xc0d3dc,7000],night:[0xa0b8e0,.35,.7,.9,0x152a3c,-200]};const [color,int,h,ex,fog,y]=configs[day];sun.color.setHex(color);sun.intensity=int;sun.position.y=y;hemi.intensity=h;renderer.toneMappingExposure=ex;scene.fog.color.setHex(fog);scene.background=day==='day'?dayHDR:sunsetHDR;scene.environment=scene.background;scene.backgroundIntensity=day==='night'?.08:day==='day'?.8:.7;scene.environmentIntensity=day==='night'?.15:.55;atmosphere.material.uniforms.skyMap.value=scene.background;atmosphere.material.uniforms.strength.value=scene.backgroundIntensity;$('#daylight span').textContent={golden:'Golden hour',day:'Daylight',night:'Blue hour'}[day];}
+function setDay(next){day=typeof next==='string'?next:day==='golden'?'day':day==='day'?'night':'golden';const configs={golden:[0xffc38b,3.1,2.3,.85,0xbac8cb,2700],day:[0xfff2d7,3,3,.9,0xc0d3dc,7000],night:[0xa0b8e0,.35,.7,.9,0x152a3c,-200]};const [color,int,h,ex,fog,y]=configs[day];sun.color.setHex(color);sun.intensity=int;sun.position.y=y;hemi.intensity=h;renderer.toneMappingExposure=ex;scene.fog.color.setHex(fog);scene.background=day==='day'?dayHDR:sunsetHDR;scene.environment=scene.background;scene.backgroundIntensity=day==='night'?.08:day==='day'?.8:.7;scene.environmentIntensity=day==='night'?.15:.55;atmosphere.material.uniforms.skyMap.value=scene.background;atmosphere.material.uniforms.strength.value=scene.backgroundIntensity;materialState.interior.value=day==='night'?1.6:.35;materialState.wetness.value=day==='night'?.5:.22;post.preset(day);$('#daylight span').textContent={golden:'Golden hour',day:'Daylight',night:'Blue hour'}[day];}
 const shots=[
  {title:'London is on your frequency.',sub:'HEATHROW CONTROL · AN OPEN-SOURCE THREE.JS EXPERIENCE',duration:9},
  {title:'Cleared to land. Two seven left.',sub:'WIDE-BODY ARRIVALS · WESTERLY OPERATIONS',duration:8},
  {title:'A small city. Always moving.',sub:'TERMINAL 5 · SATELLITE CONCOURSES · RAMP OPERATIONS',duration:8},
- {title:'The best seat in London.',sub:'87 METRES ABOVE THE AIRFIELD · HEATHROW TOWER',duration:7},
+ {title:'After dark. Still in control.',sub:'87 METRES ABOVE THE AIRFIELD · HEATHROW TOWER',duration:7},
  {title:'Two runways. One controller.',sub:'PLAY HEATHROW-SIMULATOR.ALEXCHOI.XYZ · BUILT WITH THREE.JS',duration:10}
 ];const filmDuration=shots.reduce((a,s)=>a+s.duration,0);
 function enterFilm(){cinematic=true;redrawRoutes();cinemaTime=0;sim.reset(true);clearModels();selectedId=sim.planes[0].id;controls.enabled=false;$('#interface').classList.add('hidden');$('#labels').classList.add('hidden');$('#film').classList.remove('hidden');document.body.classList.remove('clean');paused=false;}
 function exitFilm(){cinematic=false;controls.enabled=true;$('#interface').classList.remove('hidden');$('#labels').classList.remove('hidden');$('#film').classList.add('hidden');sim.reset(!playing);clearModels();selectedId=sim.planes[0].id;setView('overview');updateUI();}
-function cinema(t){let tt=t%filmDuration,idx=0;while(tt>shots[idx].duration&&idx<shots.length-1){tt-=shots[idx++].duration;}const u=tt/shots[idx].duration;const p=sim.planes[0];let pos,target;
+function cinema(t){let tt=t%filmDuration,idx=0;while(tt>shots[idx].duration&&idx<shots.length-1){tt-=shots[idx++].duration;}const u=tt/shots[idx].duration;const mood=idx===3?'night':'golden';if(day!==mood)setDay(mood);const p=sim.planes[0];let pos,target;
  if(idx===0){const a=.55+u*.42;pos=new T.Vector3(Math.cos(a)*3900,1650-u*350,Math.sin(a)*3900);target=new T.Vector3(-100,0,0);}
  if(idx===1){pos=new T.Vector3(p.x+105+u*40,p.y+45,p.z+125);target=new T.Vector3(p.x-20,p.y,p.z);}
- if(idx===2){pos=new T.Vector3(-1420+u*300,105+u*60,580-u*600);target=new T.Vector3(-1190,20,-40);}
+ if(idx===2){pos=new T.Vector3(-1650+u*300,105+u*60,580-u*600);target=new T.Vector3(-1432,20,37);}
  if(idx===3){pos=airport.tower.clone().add(new T.Vector3(15+u*50,12+u*35,20));target=new T.Vector3(1400-u*1800,30,-710);}
  if(idx===4){const a=2.15-u*.5;pos=new T.Vector3(Math.cos(a)*3700,1600+u*500,Math.sin(a)*3700);target=new T.Vector3(-100,0,0);}
  camera.position.copy(pos);camera.lookAt(target);$('#film-title').textContent=shots[idx].title;$('#film-sub').textContent=shots[idx].sub;$('#film-index').textContent=`0${idx+1} / 05`;$('.film-progress i').style.width=`${t%filmDuration/filmDuration*100}%`;
@@ -79,10 +82,12 @@ canvas.addEventListener('pointerdown',e=>{downPos={x:e.clientX,y:e.clientY};if(d
 canvas.addEventListener('pointermove',e=>{if(pointerDown&&drawing){const p=worldPoint(e);if(p&&(!drawPoints.length||p.distanceTo(drawPoints.at(-1))>100))drawPoints.push(p);}});
 canvas.addEventListener('pointerup',e=>{if(pointerDown&&drawing){pointerDown=false;if(sim.vector(selected(),drawPoints)){toast('Vector assigned. Choose a runway to complete the arrival.');}drawing=false;controls.enabled=true;document.body.classList.remove('drawing');$('#tip').textContent='Select a flight → assign a runway. Keep the final approach clear.';updateUI();return;}if(downPos&&Math.hypot(e.clientX-downPos.x,e.clientY-downPos.y)<5){worldPoint(e);const hit=raycaster.intersectObjects([...models.values()],true)[0];if(hit){let root=hit.object;while(root.parent&&root.parent!==scene)root=root.parent;const item=[...models].find(([id,m])=>m===root);if(item)select(item[0]);}}});
 window.addEventListener('keydown',e=>{if(e.target instanceof HTMLInputElement)return;if(e.key==='Escape'){if(cinematic)exitFilm();document.body.classList.remove('clean');drawing=false;controls.enabled=true;document.body.classList.remove('drawing');}if(e.code==='Space'&&!$('#help-dialog').open){e.preventDefault();togglePause();}if(e.key.toLowerCase()==='h')document.body.classList.toggle('clean');if(e.key.toLowerCase()==='f')cinematic?exitFilm():enterFilm();if(e.key.toLowerCase()==='m')toggleSound();if(['1','2','3','4'].includes(e.key)&&!cinematic)setView(['overview','tower','follow','radar'][Number(e.key)-1]);});
-window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);post.resize(innerWidth,innerHeight);});
+renderer.info.autoReset=false;function renderScene(){renderer.info.reset();post.render();}
 function step(dt){elapsed+=dt;frameCounter++;if(!paused){const simDt=dt*(cinematic?2:speed*2);for(let remain=simDt;remain>0;remain-=.1)sim.tick(Math.min(remain,.1));airport.update(sim.time);if(cinematic)cinemaTime+=dt;}
  if(cinematic){cinema(cinemaTime);}else if(view==='follow'){const p=selected()||sim.planes[0];const desired=new T.Vector3(p.x-Math.cos(p.heading)*125,p.y+70,p.z-Math.sin(p.heading)*125+145);camera.position.lerp(desired,1-Math.exp(-dt*2));controls.target.lerp(new T.Vector3(p.x,p.y,p.z),1-Math.exp(-dt*5));controls.update();}else if(view==='tower'){const p=selected()||sim.planes[0];camera.position.copy(airport.tower).add(new T.Vector3(0,4,0));controls.target.lerp(new T.Vector3(p.x,p.y,p.z),1-Math.exp(-dt));controls.update();}else controls.update();
- updateModels(dt);if(frameCounter%6===0)redrawRoutes();uiTimer+=dt;if(uiTimer>.35){uiTimer=0;updateUI();if(sim.events.length){const event=sim.events.at(-1);sim.events=[];if(playing&&!cinematic)toast(event);}}renderer.render(scene,camera);}
+ updateModels(dt);if(frameCounter%6===0)redrawRoutes();uiTimer+=dt;if(uiTimer>.35){uiTimer=0;updateUI();if(sim.events.length){const event=sim.events.at(-1);sim.events=[];if(playing&&!cinematic)toast(event);}}renderScene();}
 let manual=new URLSearchParams(location.search).has('capture');function animate(now){if(!manual){const dt=Math.min((now-lastTime)/1000,.05);step(dt);fpsTime+=dt;if(fpsTime>1){$('#fps').textContent=Math.round(1/Math.max(dt,.001))+' FPS';fpsTime=0;}}lastTime=now;requestAnimationFrame(animate);}setView('follow');updateUI();step(.016);requestAnimationFrame(animate);
-window.__HEATHROW__={ready:true,sim,renderer,scene,camera,step,start,select,setView,enterFilm,exitFilm,command,setDay,get state(){return {playing,view,cinematic,drawing,selectedId,day,paused,planes:sim.planes.map(p=>({id:p.id,x:p.x,y:p.y,z:p.z,state:p.state,route:p.route.length})),landed:sim.landed,score:sim.score,strikes:sim.strikes,drawCalls:renderer.info.render.calls};},captureFrame(t){manual=true;if(!cinematic)enterFilm();while(cinemaTime<t){const dt=Math.min(1/30,t-cinemaTime);sim.tick(dt*2);cinemaTime+=dt;elapsed+=dt;}airport.update(sim.time);updateModels(0);cinema(t);renderer.render(scene,camera);}};
+window.__HEATHROW__={ready:true,sim,renderer,scene,camera,post,step,start,select,setView,enterFilm,exitFilm,command,setDay,get state(){return {playing,view,cinematic,drawing,selectedId,day,paused,planes:sim.planes.map(p=>({id:p.id,x:p.x,y:p.y,z:p.z,state:p.state,route:p.route.length})),landed:sim.landed,score:sim.score,strikes:sim.strikes,drawCalls:renderer.info.render.calls,geography:airport.geography};},captureFrame(t){manual=true;if(!cinematic)enterFilm();while(cinemaTime<t){const dt=Math.min(1/30,t-cinemaTime);sim.tick(dt*2);cinemaTime+=dt;elapsed+=dt;}airport.update(sim.time);updateModels(0);cinema(t);renderScene();}};
+$('#loading').classList.add('hidden');
 if(new URLSearchParams(location.search).has('demo'))enterFilm();if(new URLSearchParams(location.search).has('play'))start();

@@ -9,7 +9,7 @@ const fps=24,duration=30,width=1600,height=900;
 await fs.mkdir('public/media',{recursive:true});await fs.mkdir('work/screenshots',{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});const errors=[];page.on('pageerror',e=>errors.push(e.message));
-await page.goto(base+'?demo&capture');await page.waitForFunction(()=>window.__HEATHROW__?.ready,null,{timeout:90000});
+await page.goto(base+'?demo&capture',{waitUntil:'domcontentloaded',timeout:60000});await page.waitForFunction(()=>window.__HEATHROW__?.ready,null,{timeout:120000});
 await page.addStyleTag({content:'#exit-film{display:none}'});
 const ffmpeg=spawn('ffmpeg',['-y','-loglevel','error','-f','image2pipe','-vcodec','mjpeg','-framerate',String(fps),'-i','pipe:0','-an','-c:v','libx264','-preset','fast','-crf','19','-pix_fmt','yuv420p','-movflags','+faststart',out],{stdio:['pipe','inherit','inherit']});
 for(let frame=0;frame<duration*fps;frame++){

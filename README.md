@@ -18,7 +18,7 @@ npm run build
 npm run preview
 ```
 
-No API keys, server, live flight feed, tracking or paid assets are required. Fonts, sky photographs, airport surfaces and aircraft are bundled or generated locally.
+No API keys, server, live flight feed, tracking or paid assets are required. Fonts, skies, surface textures and aircraft are bundled or generated locally. The geographic basemap streams real Esri World Imagery at runtime, with visible attribution; it is a third-party service and is not covered by this repository’s code licence. A mapped procedural surface is used if imagery cannot load. OpenStreetMap geometry is bundled separately under ODbL.
 
 ## Play
 
@@ -48,11 +48,11 @@ The base game clock advances two simulated seconds per real second. Traffic, wea
 ## What's modelled
 
 - The parallel 09L/27R and 09R/27L runways, approximately 3,902 m and 3,660 m long, separated by approximately 1,420 m.
-- Terminal 5's western main building and satellite concourses, the central Terminal 2/3 area, southern Terminal 4 and an 87 m tower.
+- Terminal 5's western main building and satellite concourses, the central Terminal 2/3 area, southern Terminal 4 and an 87 m tower, aligned with real geographic coordinates.
 - Curved metal roofs, glass curtain walls, jet bridges, stands, ramp vehicles, parking structures, apron slabs and wear, taxiway centrelines, runway thresholds, touchdown markings, skid marks and approach lights.
 - Procedural widebody airframes with tapered fuselages, swept wings, engines, fan details, windows, original geometric tail liveries, landing gear and navigation lights. The heavy variant adds four engines and an upper window row; the narrowbody is scaled. These are representative airframes, not manufacturer-exact models.
-- Reference-informed airport geometry, a procedural surrounding town, trees and approximate reservoir placement. It is not a surveyed digital twin.
-- Bundled CC0 photographic skies, image-based lighting, directional shadows, atmospheric haze and three lighting moods.
+- 764 mapped airfield features and 2,787 OpenStreetMap building footprints; mapped woodland, real satellite surroundings, and a shared local Web Mercator coordinate frame. Building heights use OSM where available and estimates elsewhere. It is not a surveyed digital twin.
+- Bundled CC0 photographic skies and asphalt/concrete/grass PBR textures; world-space material blending, roughness and normal maps, reflective glazing with procedural interior detail, brushed roof seams, HDR bloom, colour grading, MSAA, directional shadows and three lighting moods.
 - Five camera sequences: airport reveal, arrival chase, Terminal 5 flyby, tower view and closing orbit.
 
 This is a visual game, **not a flight dynamics or operational ATC trainer**. It does not implement real approach procedures, wake categories, real traffic, departure clearances or a taxiway-routing controller. Heathrow, NATS and the airlines do not endorse this project.
@@ -68,12 +68,14 @@ npm run capture                 # 1600×900 / 24 fps / 30-second H.264 MP4
 
 Browser scripts use `/usr/bin/chromium` by default. Set `CHROMIUM_PATH` to your Chromium executable, `TEST_URL` for browser tests, or `CAPTURE_URL` / `CAPTURE_OUT` for recording. The recorder advances the simulation by explicit frame times, so a slow capture machine does not produce a choppy output video. FFmpeg must be on PATH. Temporary screenshots go into ignored `work/screenshots/`.
 
-The in-browser reel is 42 seconds; the exported video plays the same five shots at 1.4× pace. The MP4 is intentionally silent. `?demo` starts the reel; `?play` starts a shift; `?capture` freezes wall-clock animation for capture automation.
+The in-browser reel includes a blue-hour tower sequence and is 42 seconds; the exported video plays the same five shots at 1.4× pace. The MP4 is intentionally silent. `?demo` starts the reel; `?play` starts a shift; `?capture` freezes wall-clock animation for capture automation.
 
 ## Source layout
 
 - `src/simulation.js` — pure game logic and separation checks.
-- `src/airport.js` — airport surfaces, structures, scenery and instancing.
+- `src/geographic-airport.js` — mapped airport geometry, structures, scenery and instancing.
+- `src/geography.js` — coordinate reference and live satellite imagery.
+- `src/materials.js` / `src/postprocessing.js` — PBR surfaces, facade shaders and the HDR rendering pipeline.
 - `src/aircraft.js` — procedural airframes and liveries.
 - `src/main.js` — renderer, interaction, cameras, radio and UI.
 - `tests/` and `scripts/` — repeatable tests and recording.
@@ -86,4 +88,4 @@ Connect this repository to Netlify, use `npm run build`, and publish `dist`. Att
 
 ## Licence and credits
 
-Original code and procedural art: [Apache-2.0](LICENSE). Third-party assets keep their original licences; see [CREDITS.md](CREDITS.md). Inspiration is credited without copying the tube simulator's code or assets. Contributions welcome.
+Original code and procedural art: [Apache-2.0](LICENSE). Third-party assets keep their original licences; see [CREDITS.md](CREDITS.md). Inspiration is credited without copying the tube simulator's code or assets. [Slop New York](https://github.com/mrdoob/slop-newyork/) informed the layered material and lighting approach; this project uses its own WebGL2 shaders for broad browser support. Contributions welcome.

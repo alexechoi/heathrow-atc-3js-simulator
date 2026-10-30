@@ -19,3 +19,14 @@ Screenshots were taken from real Chromium WebGL rendering throughout implementat
 - **Video capture:** deterministic frames from the actual app, including samples every five seconds. No AI-generated footage or external flight-simulator footage is used.
 
 The strongest fidelity is in the runway scale, terminal placement relationships and concourse / aircraft details. Surrounding buildings, taxiways, terminal footprints, airline fleets and operational procedures are approximations. The result is a reference-informed game rather than a photogrammetric reproduction.
+
+
+## Geographic rebuild after satellite comparison
+
+Real [Esri World Imagery](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer) was retrieved and visually inspected. It showed that the first procedural layout misplaced the tower, Terminal 4 and several concourses. The first layout was replaced by a geographic build using OSM coordinates, rather than stretching the image to fit the initial model.
+
+The shared frame is local Web Mercator scaled into metres at 51.47122° N, 0.46064° W. Terminal 5, its satellites and Terminal 2B are rebuilt over mapped core footprints; other buildings use simplified OSM polygons. The tower position is based on OSM node 12886892988 (51.4717604, -0.4655094), with its reported height of 86.87 m. Runway thresholds were adjusted to the geographic frame. Satellite export bounds are generated from this same frame, so the ground texture and geometry line up.
+
+The scene now uses mapped pavement shapes, 764 airfield features, 2,787 building footprints and woodland polygons. Thin jet-bridge extensions are removed from terminal core polygons during preprocessing; simplified 3D bridges are added separately. Building heights without mapped values are estimates. Satellite photography has baked shadows and may contain historical features; it is used as a basemap, not represented as live data.
+
+The New York example prompted a second rendering pass: real CC0 surface maps, reflective facade shaders with interior variation, roof seams and HVAC units, HDR bloom and colour grading. Screenshots exposed excessive ground gloss and missing Terminal 5 parked aircraft; the gloss was reduced and stand selection was distributed across the whole airport.
