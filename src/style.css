@@ -1,8 +1,1077 @@
-:root{font-family:'DM Sans Variable',sans-serif;color:#edf3eb;background:#111e24;font-synthesis:none;--mint:#c7f4cd;--muted:#a4b0ad;--line:rgba(220,239,229,.16)}*{box-sizing:border-box}body{margin:0;overflow:hidden}button,a{-webkit-tap-highlight-color:transparent}button{font:inherit;cursor:pointer;color:inherit;background:transparent;border:1px solid var(--line);transition:background .2s,border-color .2s}button:hover{background:rgba(205,244,214,.13);border-color:#a4cdb1}button:focus-visible,a:focus-visible{outline:2px solid var(--mint);outline-offset:4px}a{color:inherit;text-decoration:none}#world{position:fixed;inset:0;width:100%;height:100%;touch-action:none}.vignette{position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(4,15,23,.6),transparent 30%,transparent 65%,rgba(4,15,23,.7)),linear-gradient(90deg,rgba(4,15,23,.25),transparent 60%)}#interface{position:fixed;inset:0;pointer-events:none}#interface>*{pointer-events:auto}header{height:92px;position:absolute;top:0;left:36px;right:36px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}.brand{display:flex;gap:13px;align-items:center;font:600 20px 'Space Grotesk Variable',sans-serif;letter-spacing:2px}.brand-symbol{font-size:42px;font-weight:400;color:var(--mint)}.brand-sub{display:block;font:10px 'DM Sans Variable',sans-serif;letter-spacing:3.5px;margin-top:5px;color:#c4cec9}.top-status{display:flex;gap:12px;align-items:center;font:10px 'Space Grotesk Variable',sans-serif;letter-spacing:1.5px}.live-dot{width:6px;height:6px;display:inline-block;background:var(--mint);border-radius:50%;box-shadow:0 0 12px #b4f7b957}.divider{height:14px;width:1px;background:var(--line);margin:0 10px}.header-actions{display:flex;gap:8px;align-items:center;font-size:11px}.header-actions button,.header-actions a{padding:9px 12px;border-radius:3px}.header-actions a{border:1px solid var(--line)}.weather{position:absolute;top:127px;left:39px;pointer-events:none!important}.eyebrow{font-size:10px;letter-spacing:2.1px;font-weight:600}.accent{color:var(--mint)}h1{font:500 29px 'Space Grotesk Variable',sans-serif;margin:8px 0 14px;letter-spacing:-1px}.weather-line{display:flex;gap:18px;font:11px 'Space Grotesk Variable',sans-serif;margin-bottom:9px}.tiny{font-size:8px;letter-spacing:1px}.muted{color:var(--muted)}.view-toolbar{position:absolute;top:115px;left:50%;transform:translateX(-50%);display:flex;background:#132127c9;border:1px solid var(--line);padding:4px;backdrop-filter:blur(16px);border-radius:6px;gap:2px;white-space:nowrap}.view-toolbar button{border:0;font-size:12px;padding:9px 11px;border-radius:3px}.view-toolbar button span{font-size:10px;margin-left:4px}.view-toolbar .active{background:#d2f6d51f;color:var(--mint)}.view-toolbar>span{width:1px;background:var(--line);margin:5px}.panel{background:rgba(11,25,31,.86);border:1px solid var(--line);backdrop-filter:blur(18px);border-radius:5px;box-shadow:0 12px 48px #0002}.traffic{position:absolute;right:36px;top:176px;width:275px}.panel-heading{display:flex;justify-content:space-between;align-items:center;padding:16px 17px;font:10px 'Space Grotesk Variable',sans-serif;letter-spacing:1.4px;border-bottom:1px solid var(--line)}.pill{padding:3px 6px;background:#c7f4cd17;color:var(--mint);border-radius:3px}.traffic-columns{display:flex;justify-content:space-between;padding:13px 17px 7px;font-size:8px;letter-spacing:1px;color:#8a9b9e}.flight-row{width:100%;display:flex;align-items:center;text-align:left;border:0;border-left:2px solid transparent;border-radius:0;padding:12px 15px;gap:10px}.flight-row.selected{background:#b7f1c511;border-left-color:var(--mint)}.flight-row:hover{background:#c7f4cd12}.airline-mark{font:bold 10px 'Space Grotesk Variable';width:26px;height:26px;border:1px solid #b3cee22f;display:grid;place-items:center;border-radius:50%;color:#dae8ec}.flight-info{flex:1}.flight-info b{display:block;font:500 12px 'Space Grotesk Variable';letter-spacing:.7px}.flight-info small{display:block;color:#90a2a6;font-size:9px;margin-top:4px}.flight-data{text-align:right;font:11px 'Space Grotesk Variable'}.flight-data small{display:block;font:8px 'DM Sans Variable';letter-spacing:.7px;color:var(--mint);margin-top:5px}.flight-data small.alert{color:#ffa695}.traffic-footer{font-size:8px;letter-spacing:1px;display:flex;gap:9px;align-items:center;padding:13px 17px;border-top:1px solid var(--line);color:#b5c5be}.intro{position:absolute;left:39px;bottom:112px;max-width:490px;text-shadow:0 2px 20px #06131a44}.intro h2{font:500 clamp(40px,4.5vw,68px)/1.02 'Space Grotesk Variable',sans-serif;letter-spacing:-3px;margin:17px 0 20px}.intro p{color:#c6d1cb;font-size:13px;line-height:1.8}.intro-actions{display:flex;gap:10px;margin-top:27px}.primary{background:var(--mint);color:#152b26;border:0;padding:16px 23px;font-size:12px;font-weight:700;border-radius:4px;min-width:157px}.primary:hover{background:#e1ffe5}.primary span{margin-left:20px;font-size:17px}.secondary{background:#12262ab0;padding:15px 20px;font-size:12px;border-radius:4px;backdrop-filter:blur(12px)}.intro-note{font-size:8px;letter-spacing:1.5px;color:#9aafa6;margin-top:21px}.intro-note span{margin:0 10px}footer{position:absolute;bottom:0;left:36px;right:36px;height:67px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;font:9px 'Space Grotesk Variable';letter-spacing:.7px}.location{display:flex;gap:15px;align-items:center}.cross{font-size:24px;color:var(--mint)}.playback{display:flex;align-items:center;gap:8px}.playback button{height:29px;min-width:32px;border-radius:3px}.playback>span{font-size:8px;margin-left:7px}.footer-right{display:flex;gap:18px;align-items:center;font-size:8px;color:#a9bcb4}.footer-right button{border:0;font-size:22px}.hidden{display:none!important}#game-stats{position:absolute;left:36px;bottom:100px;display:flex;padding:18px 21px;gap:35px}#game-stats strong{display:block;font:32px 'Space Grotesk Variable';margin-top:6px}#game-stats .eyebrow{font-size:8px;color:var(--muted)}#game-stats button{border:0;font-size:24px}#command{position:absolute;right:36px;bottom:92px;width:310px}#command-hint{font-size:10px;line-height:1.6;color:#a7bab4;padding:13px 17px}.runway-buttons{display:flex;gap:8px;padding:0 13px}.runway-buttons button{flex:1;text-align:left;border-radius:3px;padding:11px}.runway-buttons span{font:25px 'Space Grotesk Variable';display:block}.runway-buttons small{display:block;font-size:7px;color:#9eb2ab;letter-spacing:.5px;margin:4px 0 13px}.runway-buttons b{font-size:7px;font-weight:500;letter-spacing:.8px;color:var(--mint)}.command-extra{display:flex;padding:12px;gap:5px}.command-extra button{flex:1;font-size:9px;padding:8px 3px;border-radius:3px}.tip{position:absolute;left:50%;bottom:82px;transform:translateX(-50%);padding:11px 17px;border-radius:40px;background:#0e232bea;color:#d1e1d7;font-size:11px;white-space:nowrap}#toast{position:absolute;left:50%;top:174px;transform:translateX(-50%) translateY(-10px);background:#11262af0;border:1px solid #c7f4cd66;border-radius:4px;padding:13px 22px;opacity:0;transition:.3s;max-width:430px;font-size:12px;line-height:1.5;pointer-events:none}#toast.visible{opacity:1;transform:translateX(-50%) translateY(0)}#labels{position:fixed;inset:0;pointer-events:none}.plane-label{position:absolute;font:10px 'Space Grotesk Variable';color:#ddf6e5;white-space:nowrap;cursor:pointer;pointer-events:auto;text-shadow:0 1px 5px #000;background:#0b20257c;padding:5px 8px;border:1px solid #d2f5da35;border-radius:2px;transform:translate(12px,-27px)}.plane-label:before{content:'';position:absolute;width:12px;height:1px;background:#dcf6de99;left:-12px;bottom:6px}.plane-label.selected{color:#e8ffb8;border-color:#d4ffaf88}.plane-label small{display:block;font-size:8px;color:#a3c8b4;margin-top:3px}#film{position:fixed;inset:0;pointer-events:none;border-top:35px solid #071217;border-bottom:35px solid #071217;background:linear-gradient(0deg,#06131a99,transparent 40%)}.film-top{position:absolute;top:28px;left:50px;right:50px;display:flex;justify-content:space-between;font-size:10px;letter-spacing:3px}.film-caption{position:absolute;left:7%;bottom:55px}.film-caption>span{color:var(--mint);font-size:10px;letter-spacing:3px}.film-caption h2{font:500 45px 'Space Grotesk Variable';letter-spacing:-1.8px;margin:13px 0}.film-caption p{font-size:9px;letter-spacing:3px;color:#bccfc6}#exit-film{position:absolute;right:40px;bottom:30px;padding:10px 15px;pointer-events:auto;font-size:10px}.film-progress{position:absolute;bottom:-35px;height:2px;left:0;right:0}.film-progress i{display:block;height:100%;background:var(--mint);width:0}dialog{background:#10262c;color:#e8f3e9;border:1px solid #748f7d66;border-radius:8px;padding:38px;width:min(540px,94vw);max-height:90vh;overflow:auto}dialog::backdrop{background:#06171bb3;backdrop-filter:blur(9px)}dialog h2{font:40px/1.1 'Space Grotesk Variable';letter-spacing:-1.5px}dialog p,dialog li{font-size:12px;line-height:1.8;color:#c1d0c9}dialog ol{padding-left:20px}dialog li{margin-bottom:10px}.close{position:absolute;right:15px;top:15px;border:0;font-size:25px}.help-keys{font-size:10px;color:var(--mint);padding:15px 0;border-top:1px solid var(--line)}dialog .tiny{font-size:9px;letter-spacing:0}body.clean #interface,body.clean #labels,body.clean .vignette{display:none}body.drawing #world{cursor:crosshair}
-@media(max-width:1100px){.top-status{display:none}.view-toolbar{left:auto;right:36px;transform:none}.traffic{width:240px}.intro h2{font-size:52px}.footer-right>span:last-of-type{display:none}.weather h1{font-size:25px}#command{width:275px}.traffic .flight-row{padding:9px 12px}.traffic{top:171px}.tip{left:36px;transform:none;bottom:75px;font-size:9px}}@media(max-width:700px){header{left:18px;right:18px;height:77px}.brand{font-size:15px;gap:8px}.brand-sub{font-size:8px}.brand-symbol{font-size:32px}.header-actions{gap:4px}.header-actions button,.header-actions a{padding:8px;font-size:10px}.weather{left:21px;top:103px}.weather h1{font-size:22px}.weather .tiny{display:none}.weather-line{font-size:9px;gap:10px}.view-toolbar{top:auto;bottom:75px;left:50%;right:auto;transform:translateX(-50%);width:max-content}.view-toolbar button{padding:9px 10px}.view-toolbar button span{display:none}.traffic{top:193px;right:16px;width:177px}.traffic-columns{display:none}.panel-heading{padding:10px;font-size:8px}.flight-row{padding:9px 8px!important;gap:6px}.flight-info b{font-size:10px}.flight-info small{font-size:8px}.flight-data{font-size:9px}.flight-data small{font-size:7px}.airline-mark{display:none}.traffic-footer{padding:10px;font-size:6px;gap:5px}.intro{left:21px;bottom:137px;max-width:95vw}.intro h2{font-size:42px;letter-spacing:-2px}.intro p{font-size:11px}.intro-actions{gap:7px;margin-top:19px}.primary{padding:13px 15px;min-width:130px}.secondary{padding:13px 12px;font-size:10px}.intro-note{font-size:6px}.intro .eyebrow{font-size:8px}footer{left:18px;right:18px;height:56px}.location{font-size:7px;gap:7px}.location .muted,.footer-right{display:none}.playback>span{display:none}#command{right:16px;bottom:130px;width:205px}#command .panel-heading{font-size:8px}#command-hint{font-size:8px;padding:8px 10px}.runway-buttons{padding:0 8px;gap:5px}.runway-buttons button{padding:8px}.runway-buttons span{font-size:20px}.runway-buttons small{font-size:6px}.runway-buttons b{font-size:6px}.command-extra{padding:8px;gap:3px}.command-extra button{font-size:7px}#game-stats{left:16px;bottom:137px;display:block;padding:12px}#game-stats>div{margin:5px 0 12px}#game-stats strong{font-size:21px}#game-stats button{display:none}.tip{top:160px;bottom:auto;left:20px;right:20px;white-space:normal;border-radius:3px;font-size:9px;padding:8px}.film-caption h2{font-size:32px}.film-top{left:20px;right:20px;font-size:7px}.film-caption{bottom:100px}.film-caption p{font-size:7px}.plane-label{font-size:8px}#toast{top:150px;width:85vw;font-size:10px}}
+:root {
+  font-family: "DM Sans Variable", sans-serif;
+  color: #edf3eb;
+  background: #111e24;
+  font-synthesis: none;
+  --mint: #c7f4cd;
+  --muted: #a4b0ad;
+  --line: rgba(220, 239, 229, 0.16);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line);
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+button:hover {
+  background: rgba(205, 244, 214, 0.13);
+  border-color: #a4cdb1;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: 4px;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+#world {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+.vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(4, 15, 23, 0.6),
+      transparent 30%,
+      transparent 65%,
+      rgba(4, 15, 23, 0.7)
+    ),
+    linear-gradient(90deg, rgba(4, 15, 23, 0.25), transparent 60%);
+}
+#interface {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+#interface > * {
+  pointer-events: auto;
+}
+header {
+  height: 92px;
+  position: absolute;
+  top: 0;
+  left: 36px;
+  right: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  font:
+    600 20px "Space Grotesk Variable",
+    sans-serif;
+  letter-spacing: 2px;
+}
+.brand-symbol {
+  font-size: 42px;
+  font-weight: 400;
+  color: var(--mint);
+}
+.brand-sub {
+  display: block;
+  font:
+    10px "DM Sans Variable",
+    sans-serif;
+  letter-spacing: 3.5px;
+  margin-top: 5px;
+  color: #c4cec9;
+}
+.top-status {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font:
+    10px "Space Grotesk Variable",
+    sans-serif;
+  letter-spacing: 1.5px;
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  display: inline-block;
+  background: var(--mint);
+  border-radius: 50%;
+  box-shadow: 0 0 12px #b4f7b957;
+}
+.divider {
+  height: 14px;
+  width: 1px;
+  background: var(--line);
+  margin: 0 10px;
+}
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+}
+.header-actions button,
+.header-actions a {
+  padding: 9px 12px;
+  border-radius: 3px;
+}
+.header-actions a {
+  border: 1px solid var(--line);
+}
+.weather {
+  position: absolute;
+  top: 127px;
+  left: 39px;
+  pointer-events: none !important;
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 2.1px;
+  font-weight: 600;
+}
+.accent {
+  color: var(--mint);
+}
+h1 {
+  font:
+    500 29px "Space Grotesk Variable",
+    sans-serif;
+  margin: 8px 0 14px;
+  letter-spacing: -1px;
+}
+.weather-line {
+  display: flex;
+  gap: 18px;
+  font:
+    11px "Space Grotesk Variable",
+    sans-serif;
+  margin-bottom: 9px;
+}
+.tiny {
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+.muted {
+  color: var(--muted);
+}
+.view-toolbar {
+  position: absolute;
+  top: 115px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  background: #132127c9;
+  border: 1px solid var(--line);
+  padding: 4px;
+  backdrop-filter: blur(16px);
+  border-radius: 6px;
+  gap: 2px;
+  white-space: nowrap;
+}
+.view-toolbar button {
+  border: 0;
+  font-size: 12px;
+  padding: 9px 11px;
+  border-radius: 3px;
+}
+.view-toolbar button span {
+  font-size: 10px;
+  margin-left: 4px;
+}
+.view-toolbar .active {
+  background: #d2f6d51f;
+  color: var(--mint);
+}
+.view-toolbar > span {
+  width: 1px;
+  background: var(--line);
+  margin: 5px;
+}
+.panel {
+  background: rgba(11, 25, 31, 0.86);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+  border-radius: 5px;
+  box-shadow: 0 12px 48px #0002;
+}
+.traffic {
+  position: absolute;
+  right: 36px;
+  top: 176px;
+  width: 275px;
+}
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 17px;
+  font:
+    10px "Space Grotesk Variable",
+    sans-serif;
+  letter-spacing: 1.4px;
+  border-bottom: 1px solid var(--line);
+}
+.pill {
+  padding: 3px 6px;
+  background: #c7f4cd17;
+  color: var(--mint);
+  border-radius: 3px;
+}
+.traffic-columns {
+  display: flex;
+  justify-content: space-between;
+  padding: 13px 17px 7px;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #8a9b9e;
+}
+.flight-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  padding: 12px 15px;
+  gap: 10px;
+}
+.flight-row.selected {
+  background: #b7f1c511;
+  border-left-color: var(--mint);
+}
+.flight-row:hover {
+  background: #c7f4cd12;
+}
+.airline-mark {
+  font: bold 10px "Space Grotesk Variable";
+  width: 26px;
+  height: 26px;
+  border: 1px solid #b3cee22f;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #dae8ec;
+}
+.flight-info {
+  flex: 1;
+}
+.flight-info b {
+  display: block;
+  font: 500 12px "Space Grotesk Variable";
+  letter-spacing: 0.7px;
+}
+.flight-info small {
+  display: block;
+  color: #90a2a6;
+  font-size: 9px;
+  margin-top: 4px;
+}
+.flight-data {
+  text-align: right;
+  font: 11px "Space Grotesk Variable";
+}
+.flight-data small {
+  display: block;
+  font: 8px "DM Sans Variable";
+  letter-spacing: 0.7px;
+  color: var(--mint);
+  margin-top: 5px;
+}
+.flight-data small.alert {
+  color: #ffa695;
+}
+.traffic-footer {
+  font-size: 8px;
+  letter-spacing: 1px;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  padding: 13px 17px;
+  border-top: 1px solid var(--line);
+  color: #b5c5be;
+}
+.intro {
+  position: absolute;
+  left: 39px;
+  bottom: 112px;
+  max-width: 490px;
+  text-shadow: 0 2px 20px #06131a44;
+}
+.intro h2 {
+  font:
+    500 clamp(40px, 4.5vw, 68px)/1.02 "Space Grotesk Variable",
+    sans-serif;
+  letter-spacing: -3px;
+  margin: 17px 0 20px;
+}
+.intro p {
+  color: #c6d1cb;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.intro-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 27px;
+}
+.primary {
+  background: var(--mint);
+  color: #152b26;
+  border: 0;
+  padding: 16px 23px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 4px;
+  min-width: 157px;
+}
+.primary:hover {
+  background: #e1ffe5;
+}
+.primary span {
+  margin-left: 20px;
+  font-size: 17px;
+}
+.secondary {
+  background: #12262ab0;
+  padding: 15px 20px;
+  font-size: 12px;
+  border-radius: 4px;
+  backdrop-filter: blur(12px);
+}
+.intro-note {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: #9aafa6;
+  margin-top: 21px;
+}
+.intro-note span {
+  margin: 0 10px;
+}
+footer {
+  position: absolute;
+  bottom: 0;
+  left: 36px;
+  right: 36px;
+  height: 67px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font: 9px "Space Grotesk Variable";
+  letter-spacing: 0.7px;
+}
+.location {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+.cross {
+  font-size: 24px;
+  color: var(--mint);
+}
+.playback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.playback button {
+  height: 29px;
+  min-width: 32px;
+  border-radius: 3px;
+}
+.playback > span {
+  font-size: 8px;
+  margin-left: 7px;
+}
+.footer-right {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  font-size: 8px;
+  color: #a9bcb4;
+}
+.footer-right button {
+  border: 0;
+  font-size: 22px;
+}
+.hidden {
+  display: none !important;
+}
+#game-stats {
+  position: absolute;
+  left: 36px;
+  bottom: 100px;
+  display: flex;
+  padding: 18px 21px;
+  gap: 35px;
+}
+#game-stats strong {
+  display: block;
+  font: 32px "Space Grotesk Variable";
+  margin-top: 6px;
+}
+#game-stats .eyebrow {
+  font-size: 8px;
+  color: var(--muted);
+}
+#game-stats button {
+  border: 0;
+  font-size: 24px;
+}
+#command {
+  position: absolute;
+  right: 36px;
+  bottom: 92px;
+  width: 310px;
+}
+#command-hint {
+  font-size: 10px;
+  line-height: 1.6;
+  color: #a7bab4;
+  padding: 13px 17px;
+}
+.runway-buttons {
+  display: flex;
+  gap: 8px;
+  padding: 0 13px;
+}
+.runway-buttons button {
+  flex: 1;
+  text-align: left;
+  border-radius: 3px;
+  padding: 11px;
+}
+.runway-buttons span {
+  font: 25px "Space Grotesk Variable";
+  display: block;
+}
+.runway-buttons small {
+  display: block;
+  font-size: 7px;
+  color: #9eb2ab;
+  letter-spacing: 0.5px;
+  margin: 4px 0 13px;
+}
+.runway-buttons b {
+  font-size: 7px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  color: var(--mint);
+}
+.command-extra {
+  display: flex;
+  padding: 12px;
+  gap: 5px;
+}
+.command-extra button {
+  flex: 1;
+  font-size: 9px;
+  padding: 8px 3px;
+  border-radius: 3px;
+}
+.tip {
+  position: absolute;
+  left: 50%;
+  bottom: 82px;
+  transform: translateX(-50%);
+  padding: 11px 17px;
+  border-radius: 40px;
+  background: #0e232bea;
+  color: #d1e1d7;
+  font-size: 11px;
+  white-space: nowrap;
+}
+#toast {
+  position: absolute;
+  left: 50%;
+  top: 174px;
+  transform: translateX(-50%) translateY(-10px);
+  background: #11262af0;
+  border: 1px solid #c7f4cd66;
+  border-radius: 4px;
+  padding: 13px 22px;
+  opacity: 0;
+  transition: 0.3s;
+  max-width: 430px;
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+#toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+#labels {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+.plane-label {
+  position: absolute;
+  font: 10px "Space Grotesk Variable";
+  color: #ddf6e5;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  text-shadow: 0 1px 5px #000;
+  background: #0b20257c;
+  padding: 5px 8px;
+  border: 1px solid #d2f5da35;
+  border-radius: 2px;
+  transform: translate(12px, -27px);
+}
+.plane-label:before {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 1px;
+  background: #dcf6de99;
+  left: -12px;
+  bottom: 6px;
+}
+.plane-label.selected {
+  color: #e8ffb8;
+  border-color: #d4ffaf88;
+}
+.plane-label small {
+  display: block;
+  font-size: 8px;
+  color: #a3c8b4;
+  margin-top: 3px;
+}
+#film {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  border-top: 35px solid #071217;
+  border-bottom: 35px solid #071217;
+  background: linear-gradient(0deg, #06131a99, transparent 40%);
+}
+.film-top {
+  position: absolute;
+  top: 28px;
+  left: 50px;
+  right: 50px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 3px;
+}
+.film-caption {
+  position: absolute;
+  left: 7%;
+  bottom: 55px;
+}
+.film-caption > span {
+  color: var(--mint);
+  font-size: 10px;
+  letter-spacing: 3px;
+}
+.film-caption h2 {
+  font: 500 45px "Space Grotesk Variable";
+  letter-spacing: -1.8px;
+  margin: 13px 0;
+}
+.film-caption p {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #bccfc6;
+}
+#exit-film {
+  position: absolute;
+  right: 40px;
+  bottom: 30px;
+  padding: 10px 15px;
+  pointer-events: auto;
+  font-size: 10px;
+}
+.film-progress {
+  position: absolute;
+  bottom: -35px;
+  height: 2px;
+  left: 0;
+  right: 0;
+}
+.film-progress i {
+  display: block;
+  height: 100%;
+  background: var(--mint);
+  width: 0;
+}
+dialog {
+  background: #10262c;
+  color: #e8f3e9;
+  border: 1px solid #748f7d66;
+  border-radius: 8px;
+  padding: 38px;
+  width: min(540px, 94vw);
+  max-height: 90vh;
+  overflow: auto;
+}
+dialog::backdrop {
+  background: #06171bb3;
+  backdrop-filter: blur(9px);
+}
+dialog h2 {
+  font: 40px/1.1 "Space Grotesk Variable";
+  letter-spacing: -1.5px;
+}
+dialog p,
+dialog li {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #c1d0c9;
+}
+dialog ol {
+  padding-left: 20px;
+}
+dialog li {
+  margin-bottom: 10px;
+}
+.close {
+  position: absolute;
+  right: 15px;
+  top: 15px;
+  border: 0;
+  font-size: 25px;
+}
+.help-keys {
+  font-size: 10px;
+  color: var(--mint);
+  padding: 15px 0;
+  border-top: 1px solid var(--line);
+}
+dialog .tiny {
+  font-size: 9px;
+  letter-spacing: 0;
+}
+body.clean #interface,
+body.clean #labels,
+body.clean .vignette {
+  display: none;
+}
+body.drawing #world {
+  cursor: crosshair;
+}
+@media (max-width: 1100px) {
+  .top-status {
+    display: none;
+  }
+  .view-toolbar {
+    left: auto;
+    right: 36px;
+    transform: none;
+  }
+  .traffic {
+    width: 240px;
+  }
+  .intro h2 {
+    font-size: 52px;
+  }
+  .footer-right > span:last-of-type {
+    display: none;
+  }
+  .weather h1 {
+    font-size: 25px;
+  }
+  #command {
+    width: 275px;
+  }
+  .traffic .flight-row {
+    padding: 9px 12px;
+  }
+  .traffic {
+    top: 171px;
+  }
+  .tip {
+    left: 36px;
+    transform: none;
+    bottom: 75px;
+    font-size: 9px;
+  }
+}
+@media (max-width: 700px) {
+  header {
+    left: 18px;
+    right: 18px;
+    height: 77px;
+  }
+  .brand {
+    font-size: 15px;
+    gap: 8px;
+  }
+  .brand-sub {
+    font-size: 8px;
+  }
+  .brand-symbol {
+    font-size: 32px;
+  }
+  .header-actions {
+    gap: 4px;
+  }
+  .header-actions button,
+  .header-actions a {
+    padding: 8px;
+    font-size: 10px;
+  }
+  .weather {
+    left: 21px;
+    top: 103px;
+  }
+  .weather h1 {
+    font-size: 22px;
+  }
+  .weather .tiny {
+    display: none;
+  }
+  .weather-line {
+    font-size: 9px;
+    gap: 10px;
+  }
+  .view-toolbar {
+    top: auto;
+    bottom: 75px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: max-content;
+  }
+  .view-toolbar button {
+    padding: 9px 10px;
+  }
+  .view-toolbar button span {
+    display: none;
+  }
+  .traffic {
+    top: 193px;
+    right: 16px;
+    width: 177px;
+  }
+  .traffic-columns {
+    display: none;
+  }
+  .panel-heading {
+    padding: 10px;
+    font-size: 8px;
+  }
+  .flight-row {
+    padding: 9px 8px !important;
+    gap: 6px;
+  }
+  .flight-info b {
+    font-size: 10px;
+  }
+  .flight-info small {
+    font-size: 8px;
+  }
+  .flight-data {
+    font-size: 9px;
+  }
+  .flight-data small {
+    font-size: 7px;
+  }
+  .airline-mark {
+    display: none;
+  }
+  .traffic-footer {
+    padding: 10px;
+    font-size: 6px;
+    gap: 5px;
+  }
+  .intro {
+    left: 21px;
+    bottom: 137px;
+    max-width: 95vw;
+  }
+  .intro h2 {
+    font-size: 42px;
+    letter-spacing: -2px;
+  }
+  .intro p {
+    font-size: 11px;
+  }
+  .intro-actions {
+    gap: 7px;
+    margin-top: 19px;
+  }
+  .primary {
+    padding: 13px 15px;
+    min-width: 130px;
+  }
+  .secondary {
+    padding: 13px 12px;
+    font-size: 10px;
+  }
+  .intro-note {
+    font-size: 6px;
+  }
+  .intro .eyebrow {
+    font-size: 8px;
+  }
+  footer {
+    left: 18px;
+    right: 18px;
+    height: 56px;
+  }
+  .location {
+    font-size: 7px;
+    gap: 7px;
+  }
+  .location .muted,
+  .footer-right {
+    display: none;
+  }
+  .playback > span {
+    display: none;
+  }
+  #command {
+    right: 16px;
+    bottom: 130px;
+    width: 205px;
+  }
+  #command .panel-heading {
+    font-size: 8px;
+  }
+  #command-hint {
+    font-size: 8px;
+    padding: 8px 10px;
+  }
+  .runway-buttons {
+    padding: 0 8px;
+    gap: 5px;
+  }
+  .runway-buttons button {
+    padding: 8px;
+  }
+  .runway-buttons span {
+    font-size: 20px;
+  }
+  .runway-buttons small {
+    font-size: 6px;
+  }
+  .runway-buttons b {
+    font-size: 6px;
+  }
+  .command-extra {
+    padding: 8px;
+    gap: 3px;
+  }
+  .command-extra button {
+    font-size: 7px;
+  }
+  #game-stats {
+    left: 16px;
+    bottom: 137px;
+    display: block;
+    padding: 12px;
+  }
+  #game-stats > div {
+    margin: 5px 0 12px;
+  }
+  #game-stats strong {
+    font-size: 21px;
+  }
+  #game-stats button {
+    display: none;
+  }
+  .tip {
+    top: 160px;
+    bottom: auto;
+    left: 20px;
+    right: 20px;
+    white-space: normal;
+    border-radius: 3px;
+    font-size: 9px;
+    padding: 8px;
+  }
+  .film-caption h2 {
+    font-size: 32px;
+  }
+  .film-top {
+    left: 20px;
+    right: 20px;
+    font-size: 7px;
+  }
+  .film-caption {
+    bottom: 100px;
+  }
+  .film-caption p {
+    font-size: 7px;
+  }
+  .plane-label {
+    font-size: 8px;
+  }
+  #toast {
+    top: 150px;
+    width: 85vw;
+    font-size: 10px;
+  }
+}
 
-.brand-symbol svg{width:40px;height:40px;display:block}.arrow-icon{display:inline-block;width:12px;height:12px;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.6}.play-icon{width:9px;height:10px;border-left:8px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent;display:inline-block;margin-right:7px;vertical-align:middle}.pause-icon{display:inline-block;width:8px;height:11px;border-left:2px solid currentColor;border-right:2px solid currentColor}.plane-label{min-width:58px}.traffic-columns span:last-child:after{content:" (FT)"}@media(max-width:700px) and (max-height:760px){body.playing .traffic{max-height:205px;overflow:auto}.intro h2{font-size:34px}.intro p{font-size:10px}.intro{bottom:130px}.traffic .flight-row{padding:7px!important}}
+.brand-symbol svg {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+.arrow-icon {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  vertical-align: middle;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+}
+.play-icon {
+  width: 9px;
+  height: 10px;
+  border-left: 8px solid currentColor;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  display: inline-block;
+  margin-right: 7px;
+  vertical-align: middle;
+}
+.pause-icon {
+  display: inline-block;
+  width: 8px;
+  height: 11px;
+  border-left: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+}
+.plane-label {
+  min-width: 58px;
+}
+.traffic-columns span:last-child:after {
+  content: " (FT)";
+}
+@media (max-width: 700px) and (max-height: 760px) {
+  body.playing .traffic {
+    max-height: 205px;
+    overflow: auto;
+  }
+  .intro h2 {
+    font-size: 34px;
+  }
+  .intro p {
+    font-size: 10px;
+  }
+  .intro {
+    bottom: 130px;
+  }
+  .traffic .flight-row {
+    padding: 7px !important;
+  }
+}
 
-#imagery-credit{position:fixed;right:10px;bottom:69px;z-index:5;max-width:95vw;font:8px/1.5 Arial,sans-serif;color:#d6dfdc;background:#0b171bb5;padding:3px 7px;border-radius:2px}body:has(#film:not(.hidden)) #imagery-credit{bottom:8px;background:transparent;font-size:8px}.runway-buttons .arrow-icon{width:8px;height:8px}@media(max-width:700px){#imagery-credit{bottom:60px;right:8px;font-size:6px;max-width:96vw}}
+#imagery-credit {
+  position: fixed;
+  right: 10px;
+  bottom: 69px;
+  z-index: 5;
+  max-width: 95vw;
+  font:
+    8px/1.5 Arial,
+    sans-serif;
+  color: #d6dfdc;
+  background: #0b171bb5;
+  padding: 3px 7px;
+  border-radius: 2px;
+}
+body:has(#film:not(.hidden)) #imagery-credit {
+  bottom: 8px;
+  background: transparent;
+  font-size: 8px;
+}
+.runway-buttons .arrow-icon {
+  width: 8px;
+  height: 8px;
+}
+@media (max-width: 700px) {
+  #imagery-credit {
+    bottom: 60px;
+    right: 8px;
+    font-size: 6px;
+    max-width: 96vw;
+  }
+}
 
-#loading{position:fixed;inset:0;z-index:20;background:radial-gradient(ellipse at 50% 45%,#193c44,#09181e 75%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px}#loading h2{font:42px 'Space Grotesk Variable';letter-spacing:-1.5px;margin:0}#loading p{font-size:12px;color:#b4c5c0;margin:0}.loading-mark{width:76px;height:76px;display:grid;place-items:center;border:1px solid #c7f4cd55;border-radius:50%;font:22px 'Space Grotesk Variable';color:#c7f4cd;margin-bottom:18px}.loading-track{width:180px;height:2px;background:#c7f4cd22;margin-top:20px;overflow:hidden}.loading-track i{display:block;width:60px;height:2px;background:#c7f4cd;animation:loading 1.8s infinite ease-in-out}@keyframes loading{from{transform:translateX(-60px)}to{transform:translateX(180px)}}
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: radial-gradient(ellipse at 50% 45%, #193c44, #09181e 75%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+}
+#loading h2 {
+  font: 42px "Space Grotesk Variable";
+  letter-spacing: -1.5px;
+  margin: 0;
+}
+#loading p {
+  font-size: 12px;
+  color: #b4c5c0;
+  margin: 0;
+}
+.loading-mark {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #c7f4cd55;
+  border-radius: 50%;
+  font: 22px "Space Grotesk Variable";
+  color: #c7f4cd;
+  margin-bottom: 18px;
+}
+.loading-track {
+  width: 180px;
+  height: 2px;
+  background: #c7f4cd22;
+  margin-top: 20px;
+  overflow: hidden;
+}
+.loading-track i {
+  display: block;
+  width: 60px;
+  height: 2px;
+  background: #c7f4cd;
+  animation: loading 1.8s infinite ease-in-out;
+}
+@keyframes loading {
+  from {
+    transform: translateX(-60px);
+  }
+  to {
+    transform: translateX(180px);
+  }
+}

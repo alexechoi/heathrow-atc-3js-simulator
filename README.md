@@ -63,7 +63,7 @@ This is a visual game, **not a flight dynamics or operational ATC trainer**. It 
 npm test                        # deterministic simulation tests
 node scripts/e2e.mjs            # Chromium desktop + mobile interaction checks
 # In another terminal: npm run preview -- --port 4173
-npm run capture                 # 1600×900 / 24 fps / 30-second H.264 MP4
+npm run capture                 # 1280×720 / 24 fps / 30-second H.264 MP4
 ```
 
 Browser scripts use `/usr/bin/chromium` by default. Set `CHROMIUM_PATH` to your Chromium executable, `TEST_URL` for browser tests, or `CAPTURE_URL` / `CAPTURE_OUT` for recording. The recorder advances the simulation by explicit frame times, so a slow capture machine does not produce a choppy output video. FFmpeg must be on PATH. Temporary screenshots go into ignored `work/screenshots/`.
