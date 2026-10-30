@@ -1302,3 +1302,9 @@ body.drawing #world {
   box-shadow: 0 0 0 3px #10272b99;
   pointer-events: none;
 }
+
+@media (max-width: 700px) {
+  .header-actions a[href="/models.html"] {
+    display: none;
+  }
+}

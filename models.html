@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Model hangar · Heathrow Control</title>
+    <link rel="icon" href="/favicon.svg" />
+  </head>
+  <body>
+    <aside class="model-sidebar">
+      <a class="back" href="/">← Heathrow Control</a
+      ><span class="eyebrow">MODEL HANGAR</span>
+      <h1>Look closer.</h1>
+      <p class="intro-copy">
+        Aircraft and terminals, outside the simulation. Drag to orbit. Scroll to
+        inspect.
+      </p>
+      <div class="model-tabs">
+        <button data-category="aircraft" class="active">Aircraft</button
+        ><button data-category="terminals">Terminals</button>
+      </div>
+      <div id="model-list"></div>
+      <div class="model-info">
+        <span class="eyebrow" id="model-kind"></span>
+        <h2 id="model-name"></h2>
+        <p id="model-dimensions"></p>
+        <p id="model-note"></p>
+        <a id="model-reference" target="_blank" rel="noopener"
+          >Open reference ↗</a
+        >
+      </div>
+    </aside>
+    <main id="model-stage">
+      <div id="model-loading">Opening the hangar…</div>
+      <canvas
+        id="model-world"
+        aria-label="Orbitable aircraft and terminal model"
+      ></canvas>
+      <div class="model-toolbar">
+        <button data-angle="perspective" class="active">Perspective</button
+        ><button data-angle="side">Side</button
+        ><button data-angle="front">Front</button
+        ><button data-angle="top">Plan</button
+        ><button id="wireframe">Wireframe</button>
+      </div>
+      <div class="model-caption">
+        <span id="model-scale"></span
+        ><span>DRAG TO ORBIT · SCROLL TO ZOOM</span>
+      </div>
+      <div id="model-credit"></div>
+    </main>
+    <script type="module" src="/src/model-viewer.js"></script>
+  </body>
+</html>

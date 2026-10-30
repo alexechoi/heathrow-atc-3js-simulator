@@ -6,7 +6,11 @@ import { buildGeographicAirport } from "./geographic-airport.js";
 import { loadGeography, IMAGERY_CREDIT } from "./geography.js";
 import { loadMaterials, materialState } from "./materials.js";
 import { createPostProcessing } from "./postprocessing.js";
-import { aircraft, loadAirlineMarkings } from "./aircraft.js";
+import {
+  aircraft,
+  loadAirlineMarkings,
+  loadAircraftModels,
+} from "./aircraft.js";
 import { Simulation, RUNWAYS, FINISHED, HOLDING_AREAS } from "./simulation.js";
 import "@fontsource-variable/dm-sans";
 import "@fontsource-variable/space-grotesk";
@@ -108,7 +112,11 @@ const atmosphere = new T.Mesh(
 scene.add(atmosphere);
 $("#loading-detail").textContent =
   "Loading surface materials and satellite imagery…";
-await Promise.all([loadMaterials(), loadAirlineMarkings()]);
+await Promise.all([
+  loadMaterials(),
+  loadAirlineMarkings(),
+  loadAircraftModels(),
+]);
 const geography = await loadGeography();
 $("#loading-detail").textContent = "Opening the tower…";
 const airport = buildGeographicAirport(scene, geography);

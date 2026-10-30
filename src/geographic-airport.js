@@ -443,21 +443,27 @@ export function buildGeographicAirport(scene, { data, near, far }) {
       );
   }
   parked.updateMatrixWorld(true);
+  // Shared parked-aircraft geometry stays on the GPU once per material, rather
+  // than copying every fuselage, wheel and engine for every stand.
   const planeBatches = new Map();
   parked.traverse((o) => {
     if (!o.isMesh) return;
-    const g = o.geometry.clone().applyMatrix4(o.matrixWorld);
-    (
-      planeBatches.get(o.material) ||
-      planeBatches.set(o.material, []).get(o.material)
-    ).push(g.index ? g.toNonIndexed() : g);
+    const key = o.geometry.uuid + ":" + o.material.uuid;
+    if (!planeBatches.has(key))
+      planeBatches.set(key, {
+        geometry: o.geometry,
+        material: o.material,
+        matrices: [],
+      });
+    planeBatches.get(key).matrices.push(o.matrixWorld.clone());
   });
-  for (const [mat, geos] of planeBatches) {
-    const m = new T.Mesh(mergeGeometries(geos), mat);
-    m.castShadow = true;
-    m.receiveShadow = true;
-    group.add(m);
-    geos.forEach((g) => g.dispose());
+  for (const { geometry, material, matrices } of planeBatches.values()) {
+    const mesh = new T.InstancedMesh(geometry, material, matrices.length);
+    matrices.forEach((matrix, i) => mesh.setMatrixAt(i, matrix));
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.computeBoundingSphere();
+    group.add(mesh);
   }
   // Airfield light fixtures are small, emissive points; bloom spreads only the brightest radiance.
   const glow = document.createElement("canvas");

@@ -1,3 +1,5 @@
+import { detailedAircraft } from "./aircraft-models.js";
+export { loadAircraftModels } from "./aircraft-models.js";
 import * as T from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { bodyLivery, tailLivery, engineLogo } from "./aircraft-liveries.js";
@@ -96,18 +98,53 @@ const profile = [
   [0.5, 0.008, -0.36],
 ];
 function cross(t, s) {
-  let i = 0;
-  while (i < profile.length - 2 && t > profile[i + 1][0]) i++;
-  const a = profile[i],
-    b = profile[i + 1];
-  const u = T.MathUtils.clamp((t - a[0]) / (b[0] - a[0]), 0, 1);
-  const f = u * u * (3 - 2 * u);
-  return {
-    r: T.MathUtils.lerp(a[1], b[1], f),
-    cy: T.MathUtils.lerp(a[2], b[2], f) * s.ry,
+  const noses = {
+    A35K: [0.39, 0.27, 0.62],
+    B77W: [0.375, 0.3, 0.58],
+    A388: [0.375, 0.56, 0.5],
+    A320: [0.35, 0.28, 0.57],
+    B789: [0.38, 0.3, 0.6],
   };
+  const [start, droop, roundness] = noses[s.type];
+  if (t >= start) {
+    const u = T.MathUtils.clamp((t - start) / (0.5 - start), 0, 1);
+    return {
+      r: Math.max(0.003, Math.pow(1 - u * u, roundness)),
+      cy: -s.ry * droop * u * u,
+    };
+  }
+  if (t >= -0.23) return { r: 1, cy: 0 };
+  let i = 0;
+  while (i < 3 && t > profile[i + 1][0]) i++;
+  const a = profile[i],
+    b = profile[i + 1],
+    h = b[0] - a[0],
+    u = T.MathUtils.clamp((t - a[0]) / h, 0, 1);
+  const interpolate = (k) => {
+    const slope = (j) => {
+      if (j === 0)
+        return (
+          (profile[1][k] - profile[0][k]) / (profile[1][0] - profile[0][0])
+        );
+      if (j === 4) return 0;
+      const left =
+        (profile[j][k] - profile[j - 1][k]) /
+        (profile[j][0] - profile[j - 1][0]);
+      const right =
+        (profile[j + 1][k] - profile[j][k]) /
+        (profile[j + 1][0] - profile[j][0]);
+      return left * right > 0 ? (2 * left * right) / (left + right) : 0;
+    };
+    return (
+      (2 * u ** 3 - 3 * u * u + 1) * a[k] +
+      (u ** 3 - 2 * u * u + u) * h * slope(i) +
+      (-2 * u ** 3 + 3 * u * u) * b[k] +
+      (u ** 3 - u * u) * h * slope(i + 1)
+    );
+  };
+  return { r: interpolate(1), cy: interpolate(2) * s.ry };
 }
-function shell(s, segments = 90, rings = 48) {
+function shell(s, segments = 144, rings = 64) {
   const pos = [],
     uv = [],
     idx = [];
@@ -178,6 +215,69 @@ function aerofoil(sections, side = 1) {
   g.computeVertexNormals();
   return g;
 }
+function windshield(s, side) {
+  const corners =
+    s.type === "A388"
+      ? [
+          [0.466, 0.035],
+          [0.448, 0.965],
+          [0.466, 0.965],
+          [0.48, 0.035],
+        ]
+      : s.type === "A320"
+        ? [
+            [0.437, 0.035],
+            [0.412, 0.83],
+            [0.441, 0.83],
+            [0.469, 0.035],
+          ]
+        : [
+            [0.445, 0.035],
+            [0.434, 0.83],
+            [0.46, 0.83],
+            [0.474, 0.035],
+          ];
+  const positions = [],
+    uv = [],
+    indices = [],
+    n = 8;
+  for (let j = 0; j <= n; j++)
+    for (let i = 0; i <= n; i++) {
+      const u = i / n,
+        v = j / n;
+      const top = corners[0].map((a, k) =>
+        T.MathUtils.lerp(a, corners[1][k], u),
+      );
+      const bottom = corners[3].map((a, k) =>
+        T.MathUtils.lerp(a, corners[2][k], u),
+      );
+      const t = T.MathUtils.lerp(top[0], bottom[0], v),
+        angle = T.MathUtils.lerp(top[1], bottom[1], v),
+        { r, cy } = cross(t, s);
+      positions.push(
+        t * s.length,
+        Math.cos(angle) * (s.ry * r + 0.045) + cy,
+        side * Math.sin(angle) * (s.rx * r + 0.045),
+      );
+      uv.push(u, v);
+      if (i < n && j < n) {
+        const k = j * (n + 1) + i;
+        const f = [k, k + 1, k + n + 1, k + 1, k + n + 2, k + n + 1];
+        for (let q = 0; q < 6; q += 3)
+          indices.push(
+            ...(side < 0
+              ? [f[q], f[q + 2], f[q + 1]]
+              : [f[q], f[q + 1], f[q + 2]]),
+          );
+      }
+    }
+  const g = new T.BufferGeometry();
+  g.setAttribute("position", new T.Float32BufferAttribute(positions, 3));
+  g.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
+  g.setIndex(indices);
+  g.computeVertexNormals();
+  return g;
+}
 function build(airline, type) {
   const s = { ...AIRFRAMES[type], type },
     L = s.length,
@@ -215,6 +315,13 @@ function build(airline, type) {
     polygonOffset: true,
     polygonOffsetFactor: -1,
   });
+  add(
+    new T.SphereGeometry(1, 36, 20),
+    airline === "BA" ? enginePaint : shared.white,
+    [-L * 0.025, -s.ry * 0.65, 0],
+    [0, 0, 0],
+    [L * 0.17, s.ry * 0.4, s.rx * 1.25],
+  );
   for (const side of [-1, 1]) {
     const winglets = type === "A35K" || type === "A320";
     const sections = [
@@ -357,11 +464,15 @@ function build(airline, type) {
         [0, side < 0 ? Math.PI : 0, 0],
       );
     }
+    add(windshield(s, side), shared.glass);
     // Cockpit panes follow the actual nose surface; A350 has the broad dark mask.
     for (let i = type === "A35K" ? -1 : 0; i < 3; i++) {
       const mask = i < 0,
-        xa = mask ? 0.361 : 0.371 + i * 0.025,
-        xb = mask ? 0.451 : xa + 0.023,
+        cockpitStart =
+          type === "A320" ? 0.385 : type === "A388" ? 0.418 : 0.411,
+        cockpitPanel = type === "A320" ? 0.023 : 0.017,
+        xa = mask ? 0.402 : cockpitStart + i * cockpitPanel,
+        xb = mask ? 0.47 : xa + cockpitPanel - 0.0015,
         thetaA = mask ? 0.78 : type === "A388" ? 0.98 : 0.85,
         thetaB = mask ? 1.34 : type === "A388" ? 1.27 : 1.28,
         offset = mask ? 0.025 : 0.04;
@@ -532,7 +643,10 @@ function build(airline, type) {
   return group;
 }
 export function aircraft(airline = "BA", type = "B789") {
-  if (typeof type === "boolean") type = type ? "A388" : "B789";
+  const parked = typeof type === "boolean";
+  if (parked) type = type ? "A388" : "B789";
+  const imported = detailedAircraft(airline, type, parked);
+  if (imported) return imported;
   if (!AIRFRAMES[type]) type = "B789";
   const key = airline + type;
   if (!cache.has(key)) cache.set(key, build(airline, type));

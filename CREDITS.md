@@ -14,7 +14,7 @@ Font licence copies are included in `public/assets/licenses/`.
 
 The Wikimedia / Geograph photographs listed in `docs/references.md` were inspected during modelling. They are not embedded in the game or relicensed as Apache-2.0. Their creators and licences remain as described on their source pages.
 
-Airframes are original simplified models. Airline artwork and names identify the represented operators; no association or endorsement is implied.
+Procedural airframes are original simplified models; the detailed 787 assets have separate upstream credits below. Airline artwork and names identify the represented operators; no association or endorsement is implied.
 
 ## Inspiration
 
@@ -54,3 +54,9 @@ The following SVGs are bundled in `public/assets/liveries/` and used as wordmark
 - `sq-bird.svg`: [Singapore Airlines logo with bird](https://en.wikipedia.org/wiki/File:Singapore_Airlines_Logo_2.svg), airline identification artwork hosted on English Wikipedia.
 
 BA tail ribbons and Emirates flag paint are simplified original drawings referenced against photographs; they are not official livery files.
+
+## Detailed Boeing 787-9 models
+
+`public/assets/models/787/`: converted exterior models and British Airways / Virgin Atlantic liveries from [FlightGear 787-family](https://github.com/IskenderWang/787-family/tree/02626b5b659d89b9399943ee167bbb0b46f0c871), **GNU GPL version 2**, by IskenderWang, Marsdolphin, Jonathan Redpath, the FGAddon 787-8 authors and other upstream contributors. These assets are excluded from Apache-2.0. Airline artwork and trademarks remain their owners' property.
+
+The directory includes the upstream licence, an adaptation notice and the corresponding AC3D/texture sources in `source/787-family-source.zip`. Conversion uses the original `scripts/convert-flightgear.py` with Blender 4.3: coordinate adjustment, material adaptation, texture downsampling, geometry decimation and removal of simulator-specific light overlays. Runtime batching and instancing preserve the common model geometry. The active and parked variants use different mesh-detail budgets. This project does not include the upstream flight dynamics, systems or cockpit interaction code.
