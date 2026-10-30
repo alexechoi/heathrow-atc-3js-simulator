@@ -70,4 +70,5 @@ Four external racetracks replace local orbits above the airport. Their names and
 - [Mapped taxiway movement](screenshots/mapped-taxi.jpg)
 - [External holding patterns on radar](screenshots/external-holds.jpg)
 - [787 geometry, painted wordmark and recessed intake](screenshots/787-livery.jpg)
+- [A350 Virgin livery and cockpit mask](screenshots/a350-livery.jpg)
 - [Animated flame and smoke particles](screenshots/incident-effects.jpg)

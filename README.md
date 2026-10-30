@@ -69,6 +69,7 @@ npm test                        # deterministic simulation tests
 node scripts/e2e.mjs            # Chromium desktop + mobile interaction checks
 node scripts/traffic-e2e.mjs    # airline logos, departures, collisions and restart
 node scripts/operations-e2e.mjs # gate-to-tower flow, mapped taxi, drawn vectors and external holds
+node scripts/touch-route-e2e.mjs # actual mobile touch input assigns a route
 # In another terminal: npm run preview -- --port 4173
 npm run capture                 # 1280×720 / 24 fps / 30-second H.264 MP4
 ```

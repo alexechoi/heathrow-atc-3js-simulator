@@ -358,11 +358,13 @@ function build(airline, type) {
       );
     }
     // Cockpit panes follow the actual nose surface; A350 has the broad dark mask.
-    for (let i = 0; i < 3; i++) {
-      const xa = 0.371 + i * 0.025,
-        xb = xa + 0.023,
-        thetaA = type === "A388" ? 0.98 : 0.85,
-        thetaB = type === "A388" ? 1.27 : 1.28;
+    for (let i = type === "A35K" ? -1 : 0; i < 3; i++) {
+      const mask = i < 0,
+        xa = mask ? 0.361 : 0.371 + i * 0.025,
+        xb = mask ? 0.451 : xa + 0.023,
+        thetaA = mask ? 0.78 : type === "A388" ? 0.98 : 0.85,
+        thetaB = mask ? 1.34 : type === "A388" ? 1.27 : 1.28,
+        offset = mask ? 0.025 : 0.04;
       const verts = [],
         uv = [],
         indices = [],
@@ -375,8 +377,8 @@ function build(airline, type) {
             { r, cy } = cross(t, s);
           verts.push(
             t * L,
-            Math.cos(angle) * (s.ry * r + 0.04) + cy,
-            side * Math.sin(angle) * (s.rx * r + 0.04),
+            Math.cos(angle) * (s.ry * r + offset) + cy,
+            side * Math.sin(angle) * (s.rx * r + offset),
           );
           uv.push(i / nx, j / ny);
           if (i < nx && j < ny) {
@@ -395,7 +397,7 @@ function build(airline, type) {
       g.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
       g.setIndex(indices);
       g.computeVertexNormals();
-      add(g, shared.glass);
+      add(g, mask ? shared.dark : shared.glass);
     }
   }
   // Fin proportions and texture orientation are independent of fuselage markings.

@@ -808,8 +808,8 @@ canvas.addEventListener("pointerup", (e) => {
         "Route assigned. Aircraft is following your vector; assign a runway when ready.",
       );
     }
-    redrawRoutes();
     drawing = false;
+    redrawRoutes();
     controls.enabled = true;
     document.body.classList.remove("drawing");
     $("#tip").textContent =

@@ -52,11 +52,26 @@ export function bodyLivery(airline, spec) {
     const cy = row(0.6, side);
     if (airline === "SQ") {
       ctx.fillStyle = "#142344";
-      ctx.fillRect(x(-L * 0.43), cy - 10, x(L * 0.385) - x(-L * 0.43), 35);
+      ctx.fillRect(
+        x(-L * 0.43),
+        cy + (side > 0 ? -10 : -25),
+        x(L * 0.385) - x(-L * 0.43),
+        35,
+      );
       ctx.fillStyle = "#d4aa45";
-      ctx.fillRect(x(-L * 0.44), cy + 25, x(L * 0.385) - x(-L * 0.44), 18);
+      ctx.fillRect(
+        x(-L * 0.44),
+        cy + (side > 0 ? 25 : -43),
+        x(L * 0.385) - x(-L * 0.44),
+        18,
+      );
       ctx.fillStyle = "#c38734";
-      ctx.fillRect(x(-L * 0.44), cy + 20, x(L * 0.385) - x(-L * 0.44), 4);
+      ctx.fillRect(
+        x(-L * 0.44),
+        cy + (side > 0 ? 20 : -24),
+        x(L * 0.385) - x(-L * 0.44),
+        4,
+      );
     }
     const doors =
       spec.type === "A320"
@@ -153,7 +168,10 @@ export function bodyLivery(airline, spec) {
       // UV pixels have different metre scales longitudinally and around the body.
       const physicalRatio = L / W / ((2 * Math.PI * spec.ry) / H);
       const height =
-        width * ratio * physicalRatio * (airline === "BA" ? 0.65 : 1);
+        width *
+        ratio *
+        physicalRatio *
+        (airline === "BA" ? 0.65 : airline === "VS" ? 0.6 : 1);
       // Virgin's horizontal wordmark is tall and is placed above the cabin line.
       ctx.drawImage(logo, -width / 2, -height / 2, width, height);
     }
