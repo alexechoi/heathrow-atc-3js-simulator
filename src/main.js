@@ -452,6 +452,7 @@ function cinema(t) {
 }
 function updateModels(dt) {
   const active = new Set();
+  const radarLabels = [];
   for (const p of sim.planes) {
     if (FINISHED.has(p.state)) continue;
     active.add(p.id);
@@ -481,15 +482,39 @@ function updateModels(dt) {
     }
     const projected = new T.Vector3(p.x, p.y + 18, p.z).project(camera);
     const label = labels.get(p.id);
+    label.classList.toggle(
+      "radar-label",
+      view === "radar" && innerWidth >= 800,
+    );
     label.style.display =
-      projected.z > 1 || Math.abs(projected.x) > 1 || Math.abs(projected.y) > 1
+      projected.z > 1 ||
+      Math.abs(projected.x) > 1 ||
+      Math.abs(projected.y) > 1 ||
+      (view === "radar" &&
+        camera.position.y > 12000 &&
+        p.kind === "departure" &&
+        p.y < 100 &&
+        p.id !== selectedId)
         ? "none"
         : "block";
     label.style.left = (projected.x * 0.5 + 0.5) * innerWidth + "px";
     label.style.top = (-projected.y * 0.5 + 0.5) * innerHeight + "px";
     label.classList.toggle("selected", p.id === selectedId);
     label.innerHTML = `${p.id}<small>${Math.round((p.y * 3.281) / 100) * 100} FT · ${p.kind === "departure" ? p.controller : p.holdName || p.runway || "INBOUND"}</small>`;
+    if (
+      view === "radar" &&
+      innerWidth >= 800 &&
+      label.style.display !== "none"
+    ) {
+      radarLabels.push({
+        label,
+        selected: p.id === selectedId,
+        x: (projected.x * 0.5 + 0.5) * innerWidth,
+        y: (-projected.y * 0.5 + 0.5) * innerHeight,
+      });
+    }
   }
+  if (radarLabels.length) positionRadarLabels(radarLabels);
   for (const [id, m] of models)
     if (!active.has(id)) {
       scene.remove(m);
@@ -497,6 +522,85 @@ function updateModels(dt) {
       labels.get(id)?.remove();
       labels.delete(id);
     }
+}
+function positionRadarLabels(items) {
+  const width = 118,
+    height = 36,
+    gap = 6;
+  const occupied = $$(
+    "header, .traffic, #command, #game-stats, .view-toolbar, .weather, footer",
+  )
+    .filter(
+      (el) =>
+        el.getClientRects().length &&
+        getComputedStyle(el).visibility !== "hidden",
+    )
+    .map((el) => el.getBoundingClientRect());
+  const overlaps = (a, b) =>
+    a.left < b.right + gap &&
+    a.right + gap > b.left &&
+    a.top < b.bottom + gap &&
+    a.bottom + gap > b.top;
+  items.sort((a, b) => Number(b.selected) - Number(a.selected));
+  for (const item of items) {
+    const candidates = [];
+    for (const dy of [
+      -height - 10,
+      10,
+      -height - 52,
+      52,
+      -height - 94,
+      94,
+      -height - 136,
+      136,
+      -height - 178,
+      178,
+      -height - 220,
+      220,
+    ])
+      for (const dx of [
+        14,
+        -width - 14,
+        -width / 2,
+        width + 24,
+        -width * 2 - 24,
+      ]) {
+        const left = Math.max(
+          12,
+          Math.min(innerWidth - width - 12, item.x + dx),
+        );
+        const top = Math.max(
+          12,
+          Math.min(innerHeight - height - 12, item.y + dy),
+        );
+        candidates.push({
+          left,
+          top,
+          right: left + width,
+          bottom: top + height,
+        });
+      }
+    const box =
+      candidates.find((c) => !occupied.some((r) => overlaps(c, r))) ||
+      candidates[0];
+    occupied.push(box);
+    const { label } = item;
+    label.style.left = `${box.left}px`;
+    label.style.top = `${box.top}px`;
+    const anchorX = Math.max(0, Math.min(width, item.x - box.left));
+    const anchorY = Math.max(0, Math.min(height, item.y - box.top));
+    const dx = item.x - box.left - anchorX,
+      dy = item.y - box.top - anchorY;
+    for (const [key, value] of Object.entries({
+      "leader-x": `${anchorX}px`,
+      "leader-y": `${anchorY}px`,
+      "leader-length": `${Math.hypot(dx, dy)}px`,
+      "leader-angle": `${Math.atan2(dy, dx)}rad`,
+      "track-x": `${item.x - box.left - 3}px`,
+      "track-y": `${item.y - box.top - 3}px`,
+    }))
+      label.style.setProperty(`--${key}`, value);
+  }
 }
 function redrawRoutes() {
   while (routeGroup.children.length) {
@@ -638,7 +742,7 @@ function updateUI() {
           ? `Cleared ${p.runway}. Keep the runway and final clear.`
           : p.state === "vectoring"
             ? `Following your vector · ${p.route.length} route points remaining.`
-            : `${p.holdName || "Inbound"} · fuel reserve in ${Math.max(0, Math.ceil((480 - p.age) / 60))} sim min.`;
+            : `${p.holdName ? `${p.holdName} · assigned ${Math.round(p.holdAltitude / 0.3048).toLocaleString()} FT` : "Inbound"} · fuel reserve in ${Math.max(0, Math.ceil((480 - p.age) / 60))} sim min.`;
     $$("[data-runway]").forEach((b) => {
       const occupied = sim.runwayTraffic(b.dataset.runway, p).length;
       b.disabled =

@@ -72,3 +72,7 @@ Four external racetracks replace local orbits above the airport. Their names and
 - [787 geometry, painted wordmark and recessed intake](screenshots/787-livery.jpg)
 - [A350 Virgin livery and cockpit mask](screenshots/a350-livery.jpg)
 - [Animated flame and smoke particles](screenshots/incident-effects.jpg)
+
+## Holding-level and radar interaction review
+
+[Stacked traffic screenshot](screenshots/holding-stacks.jpg): three aircraft share the external Bovingdon-inspired racetrack at scenario levels of 6,000, 7,000 and 8,000 ft. Labels use leader lines and search for space outside the desktop controls; the browser check verifies all seven displayed arrival labels are unobscured and that selecting the highest aircraft works. The altitude assignments reserve levels for joining aircraft and keep physical clearance from aircraft leaving the hold. A separate 30-minute simulated ground-control run completed 26 departures without collisions, delay strikes or queue deadlock.

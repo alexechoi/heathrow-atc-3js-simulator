@@ -56,7 +56,7 @@ The base game clock advances two simulated seconds per real second. Traffic, wea
 - 764 mapped airfield features and 2,787 OpenStreetMap building footprints; mapped woodland, real satellite surroundings, and a shared local Web Mercator coordinate frame. Building heights use OSM where available and estimates elsewhere. It is not a surveyed digital twin.
 - Bundled CC0 photographic skies and asphalt/concrete/grass PBR textures; world-space material blending, roughness and normal maps, reflective glazing with procedural interior detail, brushed roof seams, HDR bloom, colour grading, MSAA, directional shadows and three lighting moods.
 - Departures use a connected graph of 417 OSM taxiway ways and 16 reserved stand lead-ins. Ground aircraft queue behind other traffic and stop before runway entry. The ground → tower → departure sequence is simplified for one player; there are no live radio frequencies.
-- Bovingdon, Lambourne, Biggin and Ockham-inspired external holding stacks, with racetrack movement and vertically separated levels. Their positions, dimensions and altitudes are geographically compressed for the game and are not navigation fixes.
+- Bovingdon, Lambourne, Biggin and Ockham-inspired external holding stacks, with racetrack movement and reserved levels starting at a scenario altitude of 6,000 ft, separated by 1,000 ft. Joining flights reserve their target levels; cleared flights retain physical separation while leaving the stack. Radar labels spread apart around busy stacks and stay clear of the desktop controls. Their positions, dimensions and altitudes are geographically compressed for the game and are not navigation fixes.
 - Soft animated shader fire and wind-drifting smoke replace solid explosion meshes.
 - Five camera sequences: airport reveal, arrival chase, Terminal 5 flyby, tower view and closing orbit.
 
@@ -70,6 +70,7 @@ node scripts/e2e.mjs            # Chromium desktop + mobile interaction checks
 node scripts/traffic-e2e.mjs    # airline logos, departures, collisions and restart
 node scripts/operations-e2e.mjs # gate-to-tower flow, mapped taxi, drawn vectors and external holds
 node scripts/touch-route-e2e.mjs # actual mobile touch input assigns a route
+node scripts/holding-e2e.mjs    # stack levels, readable radar labels and click selection
 # In another terminal: npm run preview -- --port 4173
 npm run capture                 # 1280×720 / 24 fps / 30-second H.264 MP4
 ```

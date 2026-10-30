@@ -1273,3 +1273,32 @@ body.drawing #world {
     margin-top: 8px;
   }
 }
+
+.plane-label.radar-label {
+  width: 118px;
+  height: 36px;
+  transform: none;
+  text-align: left;
+  background: #10272bea;
+}
+.plane-label.radar-label::before {
+  left: var(--leader-x);
+  top: var(--leader-y);
+  bottom: auto;
+  width: var(--leader-length);
+  transform: rotate(var(--leader-angle));
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.plane-label.radar-label::after {
+  content: "";
+  position: absolute;
+  left: var(--track-x);
+  top: var(--track-y);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d5f4df;
+  box-shadow: 0 0 0 3px #10272b99;
+  pointer-events: none;
+}
