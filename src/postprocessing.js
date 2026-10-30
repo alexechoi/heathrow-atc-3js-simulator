@@ -9,7 +9,7 @@ import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 export function createPostProcessing(renderer, scene, camera) {
   const target = new T.WebGLRenderTarget(innerWidth, innerHeight, {
     type: T.HalfFloatType,
-    samples: new URLSearchParams(location.search).has("capture") ? 0 : 4,
+    samples: new URLSearchParams(location.search).has("capture") ? 2 : 4,
   });
   const composer = new EffectComposer(renderer, target);
   composer.addPass(new RenderPass(scene, camera));
