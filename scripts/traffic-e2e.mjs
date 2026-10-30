@@ -44,6 +44,7 @@ try {
     await p.locator('[data-runway="27R"] b').textContent(),
     /TAKEOFF/,
   );
+  await p.evaluate(() => window.__HEATHROW__.step(0.4));
   await settleFrame(p);
   await p.screenshot({ path: "work/screenshots/departures-desktop.png" });
   await p.click('[data-runway="27R"]');

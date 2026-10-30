@@ -104,20 +104,25 @@ export class Simulation {
     const i = this.serial++,
       t = templates[i % templates.length],
       r = RUNWAYS[runway];
-    const queue = this.planes.filter(
-      (p) =>
-        p.kind === "departure" &&
-        p.state === "holding-short" &&
-        p.runway === runway,
-    ).length;
+    const holdZ = r.z + (r.z < 0 ? 105 : -105);
+    let holdX = r.threshold + 100;
+    while (
+      this.planes.some(
+        (p) =>
+          !FINISHED.has(p.state) &&
+          p.y < 20 &&
+          Math.hypot(p.x - holdX, p.z - holdZ) < 95,
+      )
+    )
+      holdX += 100;
     const p = {
       ...flight(t, t[0].replace(/\d+/, String(600 + i))),
       kind: "departure",
       destination: t[1],
       runway,
-      x: r.threshold + 100 + queue * 100,
+      x: holdX,
       y: 5,
-      z: r.z + (r.z < 0 ? 105 : -105),
+      z: holdZ,
       speed: 0,
       state: "holding-short",
     };
@@ -300,7 +305,9 @@ export class Simulation {
       if (
         !this.demo &&
         p.age > (p.kind === "departure" ? 360 : 480) &&
-        (p.kind !== "departure" || p.state === "holding-short")
+        (p.kind === "departure"
+          ? p.state === "holding-short"
+          : p.state !== "rollout")
       ) {
         this.finish(p, p.kind === "departure" ? "cancelled" : "diverted");
         this.strike(

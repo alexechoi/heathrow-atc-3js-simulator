@@ -596,11 +596,10 @@ function command(id) {
   if (id === "hold") sim.hold(p);
   else if (id === "go-around") sim.goAround(p);
   else {
-    const others = sim.planes.filter(
-      (a) => a !== p && a.runway === id && a.state !== "landed",
-    );
-    if (others.some((a) => Math.hypot(a.x - p.x, a.z - p.z) < 1300))
-      toast("Traffic already on this approach. Consider holding for spacing.");
+    if (sim.runwayTraffic(id, p).length)
+      toast(
+        `Runway ${id} has conflicting traffic. Hold the departure or send the arrival around.`,
+      );
     sim.clear(p, id);
   }
   drawing = false;

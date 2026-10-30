@@ -200,3 +200,16 @@ test("ignored traffic eventually diverts or cancels and three delays lose the sh
   assert.equal(s.strikes, 3);
   assert.ok(s.planes.every((p) => p.state === "cancelled"));
 });
+
+test("replacement departures use free holding slots, never an occupied one", () => {
+  const s = new Simulation();
+  const first = s.planes.find(
+    (p) => p.kind === "departure" && p.runway === "27R",
+  );
+  const second = s.spawnDeparture("27R");
+  s.finish(first, "departed");
+  const replacement = s.spawnDeparture("27R");
+  assert.ok(
+    Math.hypot(second.x - replacement.x, second.z - replacement.z) >= 95,
+  );
+});
