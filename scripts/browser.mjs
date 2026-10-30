@@ -17,10 +17,19 @@ export async function captureBrowser() {
 }
 export const captureContext = { ignoreHTTPSErrors: !!process.env.HTTPS_PROXY };
 export async function settleFrame(page) {
-  await page.evaluate(() => {
-    window.__HEATHROW__?.renderer.getContext().finish();
-    return new Promise((resolve) =>
+  await page.evaluate(async () => {
+    // Resize events can arrive after Playwright resolves setViewportSize.
+    // Let the renderer/composer resize, then redraw a cleared framebuffer.
+    await new Promise((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(resolve)),
     );
+    const app = window.__HEATHROW__;
+    const viewport = `${innerWidth}x${innerHeight}`;
+    if (app && window.__settledViewport !== viewport) {
+      app.post.render();
+      window.__settledViewport = viewport;
+    }
+    app?.renderer.getContext().finish();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
   });
 }

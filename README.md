@@ -2,7 +2,7 @@
 
 **Two runways. One controller.** A playable, open-source Three.js air traffic control game inspired by Flight Control and [Piccadilly Line Driver](https://github.com/alexechoi/3js-tube-simulator).
 
-**[Play](https://heathrow-simulator.alexchoi.xyz/)** · **[Watch the camera reel](https://heathrow-simulator.alexchoi.xyz/?demo)** · **[Download the 30-second MP4](https://heathrow-simulator.alexchoi.xyz/media/heathrow-flythrough.mp4)**
+**[Play](https://heathrow-simulator.alexchoi.xyz/)** · **[Watch the camera reel](https://heathrow-simulator.alexchoi.xyz/?demo)**
 
 ![Heathrow Control](public/og.jpg)
 

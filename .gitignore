@@ -3,3 +3,6 @@ dist/
 work/
 .env*
 .netlify/
+
+# Generated flythrough export; rebuild with npm run capture.
+public/media/*.mp4

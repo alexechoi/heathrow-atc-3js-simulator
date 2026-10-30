@@ -16,7 +16,7 @@ Screenshots were taken from real Chromium WebGL rendering throughout implementat
 - **Terminal 5 comparison:** matched the curved roof and flanking aircraft arrangement to the aerial photograph. Removed roof beams protruding through the roof, added slab wear, stand outlines, jet bridges, glass mullions and ramp equipment. Satellite buildings remain simplified and evenly spaced.
 - **Second airport / concourse review:** added CC0 photographic sky environments, improved horizon haze, locally bundled fonts, and SVG controls after unsupported Unicode icons appeared as boxes.
 - **Interaction screenshots:** captured the routing map, arrival chase, concourse flyby, tower view, mobile landing page and mobile play state. Browser automation exercised controls and checked for page errors and horizontal overflow.
-- **Video capture:** deterministic frames from the actual app, including samples every five seconds. No AI-generated footage or external flight-simulator footage is used.
+- **Video capture:** deterministic frames from the actual app, including samples every three seconds. No AI-generated footage or external flight-simulator footage is used.
 
 The strongest fidelity is in the runway scale, terminal placement relationships and concourse / aircraft details. Surrounding buildings, taxiways, terminal footprints, airline fleets and operational procedures are approximations. The result is a reference-informed game rather than a photogrammetric reproduction.
 
