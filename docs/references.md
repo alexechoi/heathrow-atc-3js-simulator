@@ -82,3 +82,13 @@ Four external racetracks replace local orbits above the airport. Their names and
 The previous shared aircraft loft produced incorrect noses, cockpit glazing and a generic wing/body intersection. The BA and Virgin 787-9 now use the dedicated GPL-2.0 FlightGear 787-family exterior and original airline textures, converted through Blender with source bundled. The other airframes remain procedural studies: their forebodies now use distinct elliptical profiles and continuous aft-body tangents instead of the shared stepped cone. The model hangar explicitly identifies those differences.
 
 A footprint recheck found Terminal 2B's mapped core spans roughly x=1199–1234 m along its main section, about 35 m; the earlier 66 m core was almost twice as wide. The corrected core retains the 522 m mapped length. T5A's rooflights previously intersected the roof because they sampled the profile at the wrong width; their profile now follows the underlying roof at the same world-space coordinates. Jet bridges now have two telescopic sections, pivot drums, paired arms where appropriate, cabs, bellows, wheel supports and access stairs. T5 gables include exposed truss members, while T2B has separate glazed floor bands and a flat grey roof. These are photo-informed models, not surveyed as-built structures.
+
+
+Current local model review renders:
+
+- [BA 787-9 exterior](screenshots/model-787.jpg) and [Virgin 787-9 exterior](screenshots/model-virgin-787.jpg). FlightGear 787-family geometry and liveries, GPL-2.0; corresponding source is bundled under `public/assets/models/787/source/`.
+- [Terminal 5A](screenshots/model-t5a.jpg), including the added end gates and corrected rooflight profile.
+- [Terminal 5C](screenshots/model-t5c.jpg) and [Terminal 2B](screenshots/model-t2b.jpg), with different roof forms and corrected mapped proportions.
+- [Terminal 5A in the airport](screenshots/model-t5a-airport.jpg), including instanced parked 787 models.
+
+The local `/models.html` hangar shows 11 aircraft/terminal entries with orbit, zoom, side/front/plan views and wireframe. Browser checks cover selection, camera framing and mobile layout; the ground-control interaction check passes with the replacement meshes. Parked 787s use separate 16,305-triangle meshes, while the detailed exterior has 133,825 triangles.

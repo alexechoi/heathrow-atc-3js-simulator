@@ -10,6 +10,21 @@ export const TERMINAL_MODELS = {
   T2A: { name: "Terminal 2A", center: [783, 156], width: 304, length: 244 },
 };
 export function buildTerminals({ put, box, cyl }, only = null) {
+  // Reuse the articulated bridge assembly on the end gates as well as the sides.
+  const emit = put;
+  let assemblyTransform = null;
+  put = (g, mat, x = 0, y = 0, z = 0, ry = 0) => {
+    if (!assemblyTransform) return emit(g, mat, x, y, z, ry);
+    g.rotateY(ry);
+    g.translate(x, y, z);
+    g.applyMatrix4(assemblyTransform);
+    emit(g, mat);
+  };
+  box = (x, y, z, w, h, d, mat = "concrete", ry = 0) =>
+    put(new T.BoxGeometry(w, h, d), mat, x, y, z, ry);
+  cyl = (x, y, z, r, h, mat = "steel", n = 10) =>
+    put(new T.CylinderGeometry(r, r, h, n), mat, x, y, z);
+
   function serviceRoad(x, z, width, length) {
     const g = new T.PlaneGeometry(width, length);
     g.rotateX(-Math.PI / 2);
@@ -323,6 +338,14 @@ export function buildTerminals({ put, box, cyl }, only = null) {
           !main && Math.round((zz + coreD / 2 - 22) / 49) % 3 === 0,
         );
     if (main) {
+      for (const end of [-1, 1])
+        for (const fraction of [-0.3, 0, 0.3]) {
+          assemblyTransform = new T.Matrix4()
+            .makeTranslation(x + w * fraction, 0, z + (end * d) / 2)
+            .multiply(new T.Matrix4().makeRotationY((-end * Math.PI) / 2));
+          jetbridge(0, 0, 1, 27, false, fraction * 16);
+          assemblyTransform = null;
+        }
       // Departures viaduct, glazed pedestrian links and repeated canopy modules.
       box(x - w / 2 - 22, 9, z, 17, 1.2, d + 20, "dark");
       for (let zz = -d / 2 + 12; zz < d / 2; zz += 27) {

@@ -137,9 +137,14 @@ const entries = [
         : id === "T5A"
           ? "Main hall · 171 × 391 m"
           : "Mapped Heathrow footprint",
-    reference: id.startsWith("T5")
-      ? "https://commons.wikimedia.org/wiki/File:Heathrow_Terminal_5C_Iwelumo-1.jpg"
-      : "https://commons.wikimedia.org/wiki/File:Heathrow_Terminal_2B_-_geograph.org.uk_-_5251719.jpg",
+    reference:
+      id === "T5A"
+        ? "https://commons.wikimedia.org/wiki/File:Heathrow_Terminal_5_from_the_air.jpg"
+        : id === "T2A"
+          ? "https://commons.wikimedia.org/wiki/File:Heathrow_Terminal_2_under_construction_2012.jpg"
+          : id.startsWith("T5")
+            ? "https://commons.wikimedia.org/wiki/File:Heathrow_Terminal_5C_Iwelumo-1.jpg"
+            : "https://commons.wikimedia.org/wiki/File:Heathrow_Terminal_2B_-_geograph.org.uk_-_5251719.jpg",
     note: "Photo-referenced procedural architecture over the mapped footprint. Articulated jet bridges, roof structure, glazing and service levels. Not a surveyed digital twin.",
   })),
 ];
@@ -199,6 +204,19 @@ function setAngle(value) {
   const bounds = new T.Box3().setFromObject(model),
     center = bounds.getCenter(new T.Vector3()),
     size = bounds.getSize(new T.Vector3());
+  const framingPoints = [];
+  model.updateMatrixWorld(true);
+  model.traverse((o) => {
+    if (!o.isMesh) return;
+    o.geometry.computeBoundingBox();
+    const b = o.geometry.boundingBox;
+    for (const x of [b.min.x, b.max.x])
+      for (const y of [b.min.y, b.max.y])
+        for (const z of [b.min.z, b.max.z])
+          framingPoints.push(
+            new T.Vector3(x, y, z).applyMatrix4(o.matrixWorld),
+          );
+  });
   const extent = Math.max(size.x, size.y, size.z),
     dir = {
       perspective: new T.Vector3(1, 0.42, 1.25),
@@ -215,14 +233,12 @@ function setAngle(value) {
   camera.position.copy(center).addScaledVector(dir, extent * 2);
   camera.lookAt(center);
   camera.updateMatrixWorld();
-  // Fit the eight world-space corners in the available canvas at each viewpoint.
+  // Fit each mesh’s bounding corners in the available canvas at each viewpoint.
   let max = 0;
-  for (const x of [bounds.min.x, bounds.max.x])
-    for (const y of [bounds.min.y, bounds.max.y])
-      for (const z of [bounds.min.z, bounds.max.z]) {
-        const p = new T.Vector3(x, y, z).project(camera);
-        max = Math.max(max, Math.abs(p.x), Math.abs(p.y));
-      }
+  for (const point of framingPoints) {
+    const p = point.clone().project(camera);
+    max = Math.max(max, Math.abs(p.x), Math.abs(p.y));
+  }
   camera.position
     .copy(center)
     .addScaledVector(dir, extent * 2 * Math.max(0.35, max / 0.9));
@@ -231,12 +247,10 @@ function setAngle(value) {
     camera.lookAt(center);
     camera.updateMatrixWorld();
     let projected = 0;
-    for (const x of [bounds.min.x, bounds.max.x])
-      for (const y of [bounds.min.y, bounds.max.y])
-        for (const z of [bounds.min.z, bounds.max.z]) {
-          const p = new T.Vector3(x, y, z).project(camera);
-          projected = Math.max(projected, Math.abs(p.x), Math.abs(p.y));
-        }
+    for (const point of framingPoints) {
+      const p = point.clone().project(camera);
+      projected = Math.max(projected, Math.abs(p.x), Math.abs(p.y));
+    }
     if (projected <= 0.9) break;
     const distance = camera.position.distanceTo(center) * 1.12;
     camera.position.copy(center).addScaledVector(dir, distance);

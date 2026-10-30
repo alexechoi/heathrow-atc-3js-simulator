@@ -18,7 +18,7 @@ try {
       errors.push(m.text());
   });
   await p.goto(
-    (process.env.TEST_URL || "http://localhost:5173/") + "models.html",
+    (process.env.TEST_URL || "http://localhost:4173/") + "models.html",
     { waitUntil: "domcontentloaded" },
   );
   await p.waitForFunction(() => window.__MODELS__?.ready, null, {
@@ -32,6 +32,7 @@ try {
     "SQ-B77W",
     "BA-A320",
     "T5A",
+    "T5B",
     "T5C",
     "T2B",
     "T2A",
@@ -43,6 +44,31 @@ try {
       a.renderer.getContext().finish();
     }, id);
     await p.screenshot({ path: `work/screenshots/hangar-${id}.png` });
+    for (const angle of ["side", "front", "top"]) {
+      const framing = await p.evaluate((angle) => {
+        const a = window.__MODELS__;
+        a.setAngle(angle);
+        a.model.updateMatrixWorld(true);
+        const V = a.camera.position.constructor;
+        let max = 0;
+        a.model.traverse((o) => {
+          if (!o.isMesh) return;
+          o.geometry.computeBoundingBox();
+          const b = o.geometry.boundingBox;
+          for (const x of [b.min.x, b.max.x])
+            for (const y of [b.min.y, b.max.y])
+              for (const z of [b.min.z, b.max.z]) {
+                const v = new V(x, y, z)
+                  .applyMatrix4(o.matrixWorld)
+                  .project(a.camera);
+                max = Math.max(max, Math.abs(v.x), Math.abs(v.y));
+              }
+        });
+        return max;
+      }, angle);
+      assert.ok(framing < 1, `${id} ${angle} clipped: ${framing}`);
+    }
+
     assert.equal(
       await p.locator(".model-option.active").getAttribute("data-model"),
       id,
@@ -61,7 +87,7 @@ try {
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
-      models: 10,
+      models: 11,
       views: true,
       wireframe: true,
       mobile: true,
