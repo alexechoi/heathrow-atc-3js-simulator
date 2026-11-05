@@ -7,6 +7,8 @@ try {
       viewport: { width: 1440, height: 900 },
     }),
     errors = [];
+  // Full-airport screenshots can exceed 30 seconds on software WebGL workers.
+  page.setDefaultTimeout(90000);
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => {
     if (

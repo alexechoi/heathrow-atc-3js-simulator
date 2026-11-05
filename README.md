@@ -18,7 +18,7 @@ npm run build
 npm run preview
 ```
 
-No API keys, server, live flight feed, tracking or paid assets are required. Fonts, skies, surface textures and aircraft are bundled or generated locally. Detailed FlightGear 787 assets retain GPL-2.0 and include their corresponding source archive. The geographic basemap streams real Esri World Imagery at runtime, with visible attribution; it is a third-party service and is not covered by this repository’s code licence. A mapped procedural surface is used if imagery cannot load. OpenStreetMap geometry is bundled separately under ODbL.
+No API keys, server, live flight feed, tracking or paid assets are required. Fonts, skies, surface textures and aircraft are bundled or generated locally. Detailed FlightGear 787 and A320neo assets retain GPL-2.0 and include their corresponding source archive. The geographic basemap streams real Esri World Imagery at runtime, with visible attribution; it is a third-party service and is not covered by this repository’s code licence. A mapped procedural surface is used if imagery cannot load. OpenStreetMap geometry is bundled separately under ODbL.
 
 ## Play
 
@@ -52,7 +52,7 @@ The base game clock advances two simulated seconds per real second. Traffic, wea
 - The parallel 09L/27R and 09R/27L runways, approximately 3,902 m and 3,660 m long, separated by approximately 1,420 m.
 - Terminal 5's western main building and satellite concourses, the central Terminal 2/3 area, southern Terminal 4 and an 87 m tower, aligned with real geographic coordinates.
 - Curved metal roofs, glass curtain walls, jet bridges, stands, ramp vehicles, parking structures, apron slabs and wear, taxiway centrelines, runway thresholds, touchdown markings, skid marks and approach lights.
-- Detailed FlightGear 787-9 exterior geometry with BA and Virgin liveries, and separately dimensioned procedural studies for the other airframes: 787-9, A350-1000, A380-800, 777-300ER and A320. Curved fuselages and cockpit glazing, cambered wings, recessed engine fans, multi-axle landing gear, navigation lights and photo-referenced BA, Virgin, Emirates and Singapore paint with actual airline wordmarks. The 787 uses a dedicated model; the other aircraft remain procedural studies rather than manufacturer-exact models.
+- Detailed FlightGear 787-9 exterior geometry with BA and Virgin liveries, a dedicated BA A320neo G-TTNR exterior with LEAP-1A engines, and separately dimensioned procedural studies for the A350-1000, A380-800 and 777-300ER. Curved fuselages and cockpit glazing, cambered wings, recessed engine fans, multi-axle landing gear, navigation lights and photo-referenced BA, Virgin, Emirates and Singapore paint with actual airline wordmarks. The 787 and A320neo use dedicated exterior models; the A350, A380 and 777 remain procedural studies rather than manufacturer-exact models.
 - 764 mapped airfield features and 2,787 OpenStreetMap building footprints; mapped woodland, real satellite surroundings, and a shared local Web Mercator coordinate frame. Building heights use OSM where available and estimates elsewhere. It is not a surveyed digital twin.
 - Bundled CC0 photographic skies and asphalt/concrete/grass PBR textures; world-space material blending, roughness and normal maps, reflective glazing with procedural interior detail, brushed roof seams, HDR bloom, colour grading, MSAA, directional shadows and three lighting moods.
 - Departures use a connected graph of 417 OSM taxiway ways and 16 reserved stand lead-ins. Ground aircraft queue behind other traffic and stop before runway entry. The ground → tower → departure sequence is simplified for one player; there are no live radio frequencies.
@@ -64,7 +64,11 @@ This is a visual game, **not a flight dynamics or operational ATC trainer**. It 
 
 ## Inspect the models locally
 
-Open **`/models.html`** on the local dev server, or use the **Models** link in the simulator. The hangar includes BA/Virgin 787s, the remaining aircraft studies, and T5A/B/C and T2A/B. Orbit, zoom, switch between perspective/side/front/plan views, or toggle wireframe. Each entry identifies its modelling source and limitations.
+Open **`/models.html`** on the local dev server, or use the **Models** link in the simulator. The hangar includes BA/Virgin 787s, a BA A320neo, the remaining aircraft studies, and T5A/B/C and T2A/B. Orbit, zoom, switch between perspective/side/front/plan views, or toggle wireframe. Each entry identifies its modelling source and limitations.
+
+Aircraft revisions include per-type swept wing sections, flush spoiler/flap panel textures, corrected cockpit placement, wider landing-gear tracks and the A380’s four main bogies plus nose gear (22 wheels).
+
+[Watch the current aircraft model review](docs/media/aircraft-model-review.mp4) or see [the model screenshots and photo references](docs/references.md#a320neo-replacement-and-widebody-geometry-review--5-november-2026). These local model updates have not been deployed.
 
 Terminal revisions include T2B's mapped 35 m core (the previous 66 m core was too wide), articulated telescopic jet bridges and supports, paired bridge arms, T5 roof trusses, transverse rooflights and separate service levels.
 
@@ -77,7 +81,9 @@ node scripts/traffic-e2e.mjs    # airline logos, departures, collisions and rest
 node scripts/operations-e2e.mjs # gate-to-tower flow, mapped taxi, drawn vectors and external holds
 node scripts/touch-route-e2e.mjs # actual mobile touch input assigns a route
 node scripts/holding-e2e.mjs    # stack levels, readable radar labels and click selection
-node scripts/models-e2e.mjs     # model gallery, viewpoints, wireframe and mobile layout
+node scripts/models-e2e.mjs     # model geometry, gallery, viewpoints and mobile layout
+node scripts/aircraft-integration-e2e.mjs # A320neo traffic model and gear visibility
+node scripts/capture-models.mjs # 12-second local aircraft model-review MP4
 # In another terminal: npm run preview -- --port 4173
 npm run capture                 # 1280×720 / 24 fps / 30-second H.264 MP4
 ```

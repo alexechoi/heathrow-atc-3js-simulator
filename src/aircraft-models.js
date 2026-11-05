@@ -34,8 +34,9 @@ export async function loadAircraftModels() {
         scene.traverse((o) => {
           if (!o.isMesh) return;
           const part =
-            /gear|wheel|compressor|hyd[12]|nosedoor|^MLG|^NLG/i.test(o.name) &&
-            !/bay/i.test(o.name)
+            /gear|wheel|compressor|hyd[12]|nosedoor|^MLG|^NLG|^SideStay/i.test(
+              o.name,
+            ) && !/bay/i.test(o.name)
               ? "gear"
               : /beaconlenz|navlite|strobe/i.test(o.name)
                 ? "nav"

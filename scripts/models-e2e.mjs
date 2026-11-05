@@ -44,6 +44,45 @@ try {
       a.renderer.getContext().finish();
     }, id);
     await p.screenshot({ path: `work/screenshots/hangar-${id}.png` });
+    if (id === "EK-A388")
+      assert.equal(
+        await p.evaluate(() => window.__MODELS__.model.userData.wheelCount),
+        22,
+      );
+    if (id === "BA-A20N") {
+      const dimensions = await p.evaluate(() => {
+        const a = window.__MODELS__,
+          g = a.model.getObjectByName("gear");
+        let min = [Infinity, Infinity, Infinity],
+          max = [-Infinity, -Infinity, -Infinity];
+        a.model.traverse((o) => {
+          if (!o.isMesh) return;
+          const p = o.geometry.attributes.position;
+          for (let i = 0; i < p.count; i++)
+            for (let k = 0; k < 3; k++) {
+              const v = p.array[i * 3 + k];
+              min[k] = Math.min(min[k], v);
+              max[k] = Math.max(max[k], v);
+            }
+        });
+        return {
+          length: max[0] - min[0],
+          span: max[2] - min[2],
+          bottom: min[1] + a.model.userData.groundHeight,
+          gear: g.children.length,
+          source: a.model.userData.source,
+        };
+      });
+      assert.ok(Math.abs(dimensions.length - 37.57) < 0.15, "A320neo length");
+      assert.ok(Math.abs(dimensions.span - 35.8) < 0.15, "A320neo span");
+      assert.ok(
+        Math.abs(dimensions.bottom) < 0.01,
+        "A320neo wheels touch the ground",
+      );
+      assert.ok(dimensions.gear > 0, "A320neo landing gear can retract");
+      assert.equal(dimensions.source, "FlightGear A320-family");
+    }
+
     for (const angle of ["side", "front", "top"]) {
       const framing = await p.evaluate((angle) => {
         const a = window.__MODELS__;

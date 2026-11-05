@@ -72,7 +72,7 @@ def readac(file):
    elif k=='kids':
     local=rot.to_4x4();local.translation=loc;world=parent@local
     # Bright/dim cabin overlays and blurred spinning discs are simulator effects.
-    omit=name in ['WingtipFence','navglass','Antenna1','Antenna2'] or name.startswith('FanSpinning')
+    omit=name in ['WingtipFence','navglass','Antenna1','Antenna2','Rat','RatSpinner','ULD45'] or name.startswith('FanSpinning')
     if faces and not omit:
      mesh=bpy.data.meshes.new(name);mesh.from_pydata([convert@world@Vector(v) for v in verts],[],faces);mesh.update()
      for mat in acm:mesh.materials.append(getmaterial(mat,texture,file.name=='Trent1000.ac'))

@@ -92,3 +92,21 @@ Current local model review renders:
 - [Terminal 5A in the airport](screenshots/model-t5a-airport.jpg), including instanced parked 787 models.
 
 The local `/models.html` hangar shows 11 aircraft/terminal entries with orbit, zoom, side/front/plan views and wireframe. Browser checks cover selection, camera framing and mobile layout; the ground-control interaction check passes with the replacement meshes. Parked 787s use separate 16,305-triangle meshes, while the detailed exterior has 133,825 triangles.
+
+
+## A320neo replacement and widebody geometry review — 5 November 2026
+
+The BA short-haul aircraft now uses a dedicated A320neo exterior from [FlightGear A320-family](https://github.com/legoboyvdlp/A320-family), pinned at `fec1ecba767c8fffd145337b27012e89c01e3ade`. Its BAW source livery identifies A320-251N **G-TTNR**, with LEAP-1A26 engines and sharklets. The simulator and model viewer identify this aircraft as **A20N / A320neo**. Its source archive, GPL-2.0 licence, contributors and conversion recipe are bundled.
+
+The converted aircraft was checked against [G-TTNR at Heathrow, 16 May 2023](https://commons.wikimedia.org/wiki/File:G-TTNR_@_LHR,_2023-05-16.jpg): cockpit glazing, speedmarque above the forward door, navy belly and engines, wingtip shape, registration and Chatham fin. The photograph is reference-only and is not redistributed here.
+
+The procedural A350, A380 and 777 previously reused one scaled wing planform. They now have separate spanwise sections, swept trailing-edge fairings, flush coroguard/panel textures and corrected cockpit placement. Front-view checks exposed glazing that dipped in the middle; the panes are now projected onto the nose from physical window heights. Landing gear now has wider tracks, connected braces and bogie beams. The A380 has two four-wheel wing bogies, two six-wheel body bogies and two nose wheels (22 total). These remain photo-guided procedural models; they have not reached the fidelity of the imported 787/A320neo exteriors.
+
+- [BA A320neo model](screenshots/model-a320neo.jpg)
+- [Revised Virgin A350-1000](screenshots/model-a350-revised.jpg)
+- [Revised Emirates A380-800](screenshots/model-a380-revised.jpg)
+- [Revised Singapore 777-300ER](screenshots/model-777-revised.jpg)
+
+The model browser check verifies all 11 entries and view framing, the A320neo's length/span and wheel-to-ground alignment, and the A380's wheel count. `scripts/aircraft-integration-e2e.mjs` checks that the dedicated A320neo is used by traffic and its gear appears on the ground and disappears in flight.
+
+[Watch the 12-second aircraft review reel](media/aircraft-model-review.mp4). This is a local model turntable, not a new airport flythrough: 1280 × 720, 24 fps, H.264, silent. `node scripts/capture-models.mjs` reproduces its three camera passes.

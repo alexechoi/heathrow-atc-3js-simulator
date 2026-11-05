@@ -92,7 +92,7 @@ const entries = [
     type: "A35K",
     reference:
       "https://commons.wikimedia.org/wiki/File:Virgin_Atlantic_airbus_a350-1000_G-VJAM.jpg",
-    note: "Procedural study with a dedicated silhouette, cockpit mask, curved wingtips and three-axle main gear. Further detailing remains.",
+    note: "Photo-guided procedural model with a revised cockpit mask, swept wing, curved tips and six-wheel main bogies. Further detailing remains.",
   },
   {
     id: "EK-A388",
@@ -103,7 +103,7 @@ const entries = [
     type: "A388",
     reference:
       "https://commons.wikimedia.org/wiki/File:Emirates_Airbus_A380_A6-EOG_Perth_2024_(01).jpg",
-    note: "Procedural study of the double-deck fuselage, four-engine wing and Emirates paint. Further detailing remains.",
+    note: "Photo-guided procedural model with a double-deck fuselage, four-engine wing and 22-wheel undercarriage. Further detailing remains.",
   },
   {
     id: "SQ-B77W",
@@ -313,7 +313,9 @@ function select(id) {
   $("#model-credit").textContent =
     selected.type === "B789" || selected.type === "A20N"
       ? `Geometry & livery: FlightGear ${selected.type === "A20N" ? "A320-family" : "787-family"} contributors · GPL-2.0 · Source and conversion included in repository.`
-      : "Original procedural model · Geometry references © OpenStreetMap contributors · Airline trademarks belong to their owners.";
+      : selected.type
+        ? "Original procedural aircraft · Photo references: Wikimedia Commons · Airline trademarks belong to their owners."
+        : "Original procedural terminal · Geometry references © OpenStreetMap contributors.";
   $("#model-list").innerHTML = entries
     .filter((e) => e.category === category)
     .map(
@@ -372,6 +374,7 @@ window.__MODELS__ = {
   renderer,
   scene,
   camera,
+  controls,
   entries,
   get model() {
     return model;

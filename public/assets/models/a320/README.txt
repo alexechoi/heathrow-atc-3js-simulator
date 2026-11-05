@@ -11,7 +11,7 @@ See LICENSE and COPYRIGHT.md. Airline marks belong to their owners.
 
 Modifications: exterior-only AC3D conversion to glTF; coordinates centred;
 static landing gear; removal of the alternate wingtip fences, optional Wi-Fi
-fairings and blurred fan meshes; PBR material adaptation; texture downsampling
+fairings, deployed emergency turbine, cargo container and blurred fan meshes; PBR material adaptation; texture downsampling
 to 2048 px; light mesh decimation. No aircraft systems or flightdeck included.
 
 Corresponding source is bundled in source/a320-family-source.zip, including
