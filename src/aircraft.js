@@ -41,6 +41,15 @@ export const AIRFRAMES = {
     engine: 2.08,
     gear: 6.1,
   },
+  A20N: {
+    length: 37.57,
+    span: 35.8,
+    rx: 1.98,
+    ry: 2.05,
+    fin: 8.1,
+    engine: 1.3,
+    gear: 3.8,
+  },
   A320: {
     length: 37.57,
     span: 35.8,
@@ -144,7 +153,7 @@ function cross(t, s) {
   };
   return { r: interpolate(1), cy: interpolate(2) * s.ry };
 }
-function shell(s, segments = 144, rings = 64) {
+function shell(s, segments = 240, rings = 80) {
   const pos = [],
     uv = [],
     idx = [];
@@ -176,7 +185,7 @@ function aerofoil(sections, side = 1) {
   const pos = [],
     uv = [],
     idx = [],
-    n = 18;
+    n = 32;
   for (let i = 0; i < sections.length; i++) {
     const [z, le, te, y, thickness] = sections[i],
       chord = le - te;
@@ -193,7 +202,10 @@ function aerofoil(sections, side = 1) {
             0.2843 * u ** 3 -
             0.1015 * u ** 4);
         pos.push(le - u * chord, y + h * face, z * side);
-        uv.push(u, i / (sections.length - 1));
+        uv.push(
+          u,
+          (z - sections[0][0]) / (sections.at(-1)[0] - sections[0][0]),
+        );
       }
   }
   const stride = (n + 1) * 2;
@@ -215,32 +227,13 @@ function aerofoil(sections, side = 1) {
   g.computeVertexNormals();
   return g;
 }
-function windshield(s, side) {
-  const corners =
-    s.type === "A388"
-      ? [
-          [0.466, 0.035],
-          [0.448, 0.965],
-          [0.466, 0.965],
-          [0.48, 0.035],
-        ]
-      : s.type === "A320"
-        ? [
-            [0.437, 0.035],
-            [0.412, 0.83],
-            [0.441, 0.83],
-            [0.469, 0.035],
-          ]
-        : [
-            [0.445, 0.035],
-            [0.434, 0.83],
-            [0.46, 0.83],
-            [0.474, 0.035],
-          ];
+// Surface-conforming cockpit panels; the crown stays painted, glazing wraps
+// around the drooped nose at flight-deck height rather than across the roof.
+function cockpitPanel(s, side, corners, offset = 0.035) {
   const positions = [],
     uv = [],
     indices = [],
-    n = 8;
+    n = 32;
   for (let j = 0; j <= n; j++)
     for (let i = 0; i <= n; i++) {
       const u = i / n,
@@ -251,18 +244,24 @@ function windshield(s, side) {
       const bottom = corners[3].map((a, k) =>
         T.MathUtils.lerp(a, corners[2][k], u),
       );
-      const t = T.MathUtils.lerp(top[0], bottom[0], v),
-        angle = T.MathUtils.lerp(top[1], bottom[1], v),
-        { r, cy } = cross(t, s);
-      positions.push(
-        t * s.length,
-        Math.cos(angle) * (s.ry * r + 0.045) + cy,
-        side * Math.sin(angle) * (s.rx * r + 0.045),
-      );
+      const z = T.MathUtils.lerp(top[0], bottom[0], v);
+      const y = T.MathUtils.lerp(top[1], bottom[1], v);
+      // Project the windshield onto the nose along the longitudinal axis.
+      // Specifying physical heights keeps its brow level in front elevation.
+      let lo = 0.26,
+        hi = 0.4999;
+      for (let k = 0; k < 24; k++) {
+        const t = (lo + hi) / 2,
+          { r, cy } = cross(t, s);
+        const rho = ((y - cy) / (s.ry * r)) ** 2 + (z / (s.rx * r)) ** 2;
+        if (rho > 1) hi = t;
+        else lo = t;
+      }
+      positions.push((lo + hi) * 0.5 * s.length + offset, y, side * z);
       uv.push(u, v);
       if (i < n && j < n) {
-        const k = j * (n + 1) + i;
-        const f = [k, k + 1, k + n + 1, k + 1, k + n + 2, k + n + 1];
+        const k = j * (n + 1) + i,
+          f = [k, k + 1, k + n + 1, k + 1, k + n + 2, k + n + 1];
         for (let q = 0; q < 6; q += 3)
           indices.push(
             ...(side < 0
@@ -277,6 +276,99 @@ function windshield(s, side) {
   g.setIndex(indices);
   g.computeVertexNormals();
   return g;
+}
+const wingStations = {
+  A35K: [
+    [1.9, 12, -12.5, -1.65, 0.12],
+    [10, 5.3, -12.5, -0.85, 0.11],
+    [20, -3, -14, 0.3, 0.095],
+    [28.6, -10.8, -14.8, 1.45, 0.08],
+    [30.3, -12.1, -15, 1.8, 0.075],
+    [31.3, -13, -15.2, 2.2, 0.07],
+    [31.95, -13.8, -15.4, 3, 0.065],
+    [32.25, -14.35, -15.6, 3.85, 0.055],
+    [32.375, -14.7, -15.75, 4.5, 0.045],
+  ],
+  A388: [
+    [2.4, 11, -17, -2.1, 0.125],
+    [12, 6, -18, -1.1, 0.12],
+    [24, -2, -19, 0.5, 0.105],
+    [36, -12.8, -18.3, 2.1, 0.08],
+    [39.875, -16.2, -18.5, 2.75, 0.065],
+  ],
+  B77W: [
+    [2, 10, -13.5, -1.7, 0.12],
+    [10.8, 3.4, -14.5, -0.9, 0.11],
+    [22, -6.5, -16.6, 0.65, 0.09],
+    [29.8, -13.5, -17.6, 2.05, 0.075],
+    [32.4, -17, -18.4, 2.6, 0.045],
+  ],
+  A320: [
+    [1.3, 4.6, -5.1, -1, 0.12],
+    [5.8, 1.4, -5.6, -0.55, 0.11],
+    [13.9, -4.1, -6.65, 0.45, 0.09],
+    [16.6, -5.9, -7.2, 0.9, 0.075],
+    [17.3, -6.45, -7.45, 1.65, 0.065],
+    [17.9, -7.05, -7.65, 3.1, 0.045],
+  ],
+  B789: [
+    [1.9, 9, -11, -1.5, 0.12],
+    [10.2, 2.3, -12, -0.8, 0.1],
+    [21, -7, -14, 0.8, 0.085],
+    [28.1, -13.4, -15.8, 2, 0.07],
+    [30.06, -16, -16.6, 2.8, 0.04],
+  ],
+};
+function wingAt(stations, z) {
+  let i = 0;
+  while (i < stations.length - 2 && z > stations[i + 1][0]) i++;
+  const a = stations[i],
+    b = stations[i + 1],
+    u = T.MathUtils.clamp((z - a[0]) / (b[0] - a[0]), 0, 1);
+  return a.map((v, k) => T.MathUtils.lerp(v, b[k], u));
+}
+const wingMaterials = new Map();
+function wingMaterial(type) {
+  if (wingMaterials.has(type)) return wingMaterials.get(type);
+  const c = document.createElement("canvas");
+  c.width = c.height = 2048;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#d5d9db";
+  ctx.fillRect(0, 0, 2048, 2048);
+  // Corrosion protection, spoilers, ailerons and flap joints are flush paint.
+  ctx.fillStyle = "#aeb5ba";
+  ctx.fillRect(360, 230, 930, 1600);
+  ctx.strokeStyle = "#737e85";
+  ctx.lineWidth = 1.3;
+  const panel = (x, y, w, h) => ctx.strokeRect(x, y, w, h);
+  for (let k = 0; k < 7; k++) {
+    panel(1210, 490 + k * 176, 260, 164);
+    panel(1505, 490 + k * 176, 525, 164);
+  }
+  panel(1470, 160, 570, 315);
+  panel(1505, 1730, 530, 170);
+  ctx.beginPath();
+  ctx.moveTo(210, 90);
+  ctx.lineTo(210, 1960);
+  ctx.stroke();
+  ctx.strokeStyle = "#9aa2a7";
+  ctx.lineWidth = 0.8;
+  for (let y = 340; y < 1940; y += 100) {
+    ctx.beginPath();
+    ctx.moveTo(230, y);
+    ctx.lineTo(1460, y);
+    ctx.stroke();
+  }
+  const map = new T.CanvasTexture(c);
+  map.colorSpace = T.SRGBColorSpace;
+  map.anisotropy = 16;
+  const material = new T.MeshStandardMaterial({
+    map,
+    roughness: 0.43,
+    metalness: 0.2,
+  });
+  wingMaterials.set(type, material);
+  return material;
 }
 function build(airline, type) {
   const s = { ...AIRFRAMES[type], type },
@@ -323,15 +415,8 @@ function build(airline, type) {
     [L * 0.17, s.ry * 0.4, s.rx * 1.25],
   );
   for (const side of [-1, 1]) {
-    const winglets = type === "A35K" || type === "A320";
-    const sections = [
-      [s.rx * 0.65, L * 0.12, -L * 0.17, -s.ry * 0.43, 0.115],
-      [S * 0.34, L * 0.025, -L * 0.18, -s.ry * 0.35, 0.1],
-      [S * 0.7, -L * 0.12, -L * 0.235, 0.7, 0.085],
-      [S * 0.91, -L * 0.205, -L * 0.263, 1.8, 0.075],
-      [S, -L * 0.255, -L * 0.283, winglets ? 4.5 : 2.5, 0.05],
-    ];
-    add(aerofoil(sections, side), shared.wing);
+    const stations = wingStations[type];
+    add(aerofoil(stations, side), wingMaterial(type));
     add(
       aerofoil(
         [
@@ -343,31 +428,31 @@ function build(airline, type) {
       ),
       shared.wing,
     );
-    // Flap-track fairings and panel seams articulate the wing instead of flat slabs.
-    for (const z of [S * 0.28, S * 0.44, S * 0.61])
-      add(
-        new T.SphereGeometry(1, 12, 8),
-        shared.white,
-        [-L * 0.16, -0.8, side * z],
-        [0, 0, 0],
-        [3.1, 0.32, 0.34],
-      );
-    for (const fraction of [0.32, 0.52, 0.72]) {
+    // Fairings follow the swept trailing edge and sit beneath the wing.
+    for (const fraction of [0.28, 0.44, 0.62]) {
       const z = S * fraction,
-        xx = L * (0.04 - fraction * 0.26);
+        [, le, te, y] = wingAt(stations, z);
       add(
-        new T.BoxGeometry(L * 0.07, 0.025, 0.08),
-        shared.dark,
-        [xx, Math.max(0.18, 3 * fraction - 1), side * z],
+        new T.SphereGeometry(1, 24, 12),
+        shared.white,
+        [te + 0.4, y - 0.38, side * z],
         [0, 0, 0],
+        [type === "A320" ? 1.45 : 2.65, 0.28, 0.34],
       );
     }
-    if (type === "A388")
-      add(new T.BoxGeometry(1.4, 2.4, 0.12), enginePaint, [
-        -L * 0.265,
-        2.7,
-        side * S,
-      ]);
+    if (type === "A388") {
+      const fence = new T.Shape();
+      fence.moveTo(-18.9, 1.65);
+      fence.lineTo(-18.5, 5.05);
+      fence.quadraticCurveTo(-18.2, 5.3, -17.95, 4.85);
+      fence.lineTo(-16.25, 2.8);
+      fence.closePath();
+      add(
+        new T.ExtrudeGeometry(fence, { depth: 0.1, bevelEnabled: false }),
+        enginePaint,
+        [0, 0, side * S - 0.05],
+      );
+    }
     // Smooth swept pylons, shaped nacelles, recessed fan discs and exhaust cones.
     for (const engineIndex of type === "A388" ? [0, 1] : [0]) {
       const ez = side * S * (engineIndex ? 0.57 : 0.3),
@@ -431,16 +516,17 @@ function build(airline, type) {
         [ex - len * 0.42, ey, ez],
         [0, 0, Math.PI / 2],
       );
-      const pylon = new T.Shape();
-      pylon.moveTo(-2, -0.2);
-      pylon.lineTo(2.7, -0.2);
-      pylon.lineTo(0.7, 2.7);
-      pylon.lineTo(-2, 2.1);
+      const pylon = new T.Shape(),
+        wy = wingAt(stations, Math.abs(ez))[3] - ey;
+      pylon.moveTo(-2, rad * 0.65);
+      pylon.lineTo(2.4, rad * 0.65);
+      pylon.lineTo(0.65, wy + 0.02);
+      pylon.lineTo(-2, wy + 0.02);
       pylon.closePath();
       add(
-        new T.ExtrudeGeometry(pylon, { depth: 0.48, bevelEnabled: false }),
+        new T.ExtrudeGeometry(pylon, { depth: 0.44, bevelEnabled: false }),
         shared.wing,
-        [ex - 1, ey, ez - 0.24],
+        [ex - 1, ey, ez - 0.22],
       );
       if (type === "B789")
         for (let k = 0; k < 18; k++) {
@@ -464,52 +550,40 @@ function build(airline, type) {
         [0, side < 0 ? Math.PI : 0, 0],
       );
     }
-    add(windshield(s, side), shared.glass);
-    // Cockpit panes follow the actual nose surface; A350 has the broad dark mask.
-    for (let i = type === "A35K" ? -1 : 0; i < 3; i++) {
-      const mask = i < 0,
-        cockpitStart =
-          type === "A320" ? 0.385 : type === "A388" ? 0.418 : 0.411,
-        cockpitPanel = type === "A320" ? 0.023 : 0.017,
-        xa = mask ? 0.402 : cockpitStart + i * cockpitPanel,
-        xb = mask ? 0.47 : xa + cockpitPanel - 0.0015,
-        thetaA = mask ? 0.78 : type === "A388" ? 0.98 : 0.85,
-        thetaB = mask ? 1.34 : type === "A388" ? 1.27 : 1.28,
-        offset = mask ? 0.025 : 0.04;
-      const verts = [],
-        uv = [],
-        indices = [],
-        nx = 8,
-        ny = 4;
-      for (let i = 0; i <= nx; i++)
-        for (let j = 0; j <= ny; j++) {
-          const t = T.MathUtils.lerp(xa, xb, i / nx),
-            angle = T.MathUtils.lerp(thetaA, thetaB, j / ny),
-            { r, cy } = cross(t, s);
-          verts.push(
-            t * L,
-            Math.cos(angle) * (s.ry * r + offset) + cy,
-            side * Math.sin(angle) * (s.rx * r + offset),
-          );
-          uv.push(i / nx, j / ny);
-          if (i < nx && j < ny) {
-            const k = i * (ny + 1) + j;
-            const face = [k, k + ny + 1, k + 1, k + 1, k + ny + 1, k + ny + 2];
-            for (let n = 0; n < 6; n += 3)
-              indices.push(
-                ...(side > 0
-                  ? [face[n], face[n + 2], face[n + 1]]
-                  : [face[n], face[n + 1], face[n + 2]]),
-              );
-          }
-        }
-      const g = new T.BufferGeometry();
-      g.setAttribute("position", new T.Float32BufferAttribute(verts, 3));
-      g.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
-      g.setIndex(indices);
-      g.computeVertexNormals();
-      add(g, mask ? shared.dark : shared.glass);
+    const wide = type === "A388" ? 2.8 : type === "A320" ? 1.8 : 2.72;
+    const h = type === "A388" ? 1.05 : type === "A320" ? 0.95 : 1.3;
+    const panes = [
+      [
+        [0.035, h],
+        [wide * 0.61, h * 0.98],
+        [wide * 0.64, h * 0.27],
+        [0.035, h * 0.29],
+      ],
+      [
+        [wide * 0.64, h * 0.97],
+        [wide * 0.96, h * 0.68],
+        [wide * 0.97, h * 0.2],
+        [wide * 0.67, h * 0.27],
+      ],
+    ];
+    if (type === "A35K") {
+      add(
+        cockpitPanel(
+          s,
+          side,
+          [
+            [0.012, h + 0.12],
+            [wide, h * 0.77],
+            [wide * 1.015, h * 0.11],
+            [0.012, h * 0.2],
+          ],
+          0.07,
+        ),
+        shared.dark,
+      );
     }
+    for (const pane of panes)
+      add(cockpitPanel(s, side, pane, 0.13), shared.glass);
   }
   // Fin proportions and texture orientation are independent of fuselage markings.
   const finPoints = [
@@ -594,42 +668,83 @@ function build(airline, type) {
     hub.position.copy(tyre.position);
     gear.add(hub);
   };
-  for (const [x, z, main] of [
-    [L * 0.34, 0, false],
-    [-L * 0.07, -s.rx * 0.8, true],
-    [-L * 0.07, s.rx * 0.8, true],
-    ...(type === "A388"
-      ? [
-          [-L * 0.12, -s.rx * 1.5, true],
-          [-L * 0.12, s.rx * 1.5, true],
-        ]
-      : []),
-  ]) {
-    const r = main ? 0.62 : 0.43,
-      y = -s.gear + r;
-    const strut = new T.Mesh(
-      new T.CylinderGeometry(0.12, 0.16, Math.max(0.6, s.gear - s.ry), 10),
-      shared.alloy,
+  const gearLayout = {
+    A35K: [
+      [L * 0.365, 0, 1, false],
+      [-5.2, -5.3, 3, true],
+      [-5.2, 5.3, 3, true],
+    ],
+    B77W: [
+      [L * 0.355, 0, 1, false],
+      [-5.5, -5.5, 3, true],
+      [-5.5, 5.5, 3, true],
+    ],
+    A388: [
+      [L * 0.365, 0, 1, false],
+      [-5, -6.9, 2, true],
+      [-5, 6.9, 2, true],
+      [-9.2, -2.7, 3, true],
+      [-9.2, 2.7, 3, true],
+    ],
+    A320: [
+      [L * 0.35, 0, 1, false],
+      [-2.5, -3.8, 1, true],
+      [-2.5, 3.8, 1, true],
+    ],
+    B789: [
+      [L * 0.355, 0, 1, false],
+      [-4.7, -4.9, 2, true],
+      [-4.7, 4.9, 2, true],
+    ],
+  }[type];
+  const link = (a, b, r, mat = shared.alloy) => {
+    const start = new T.Vector3(...a),
+      end = new T.Vector3(...b),
+      delta = end.clone().sub(start);
+    const mesh = new T.Mesh(
+      new T.CylinderGeometry(r, r, delta.length(), 12),
+      mat,
     );
-    strut.position.set(x, (y - s.ry) / 2, z);
-    gear.add(strut);
-    const axles = main
-      ? type === "A320"
-        ? 1
-        : type === "B77W" || type === "A35K"
-          ? 3
-          : 2
-      : 1;
-    for (let a = 0; a < axles; a++)
-      for (const side of [-1, 1])
-        wheel(x + (a - (axles - 1) / 2) * 1.05, y, z + side * 0.38, r);
+    mesh.position.copy(start.add(end).multiplyScalar(0.5));
+    mesh.quaternion.setFromUnitVectors(
+      new T.Vector3(0, 1, 0),
+      delta.normalize(),
+    );
+    gear.add(mesh);
+  };
+  for (const [x, z, axles, main] of gearLayout) {
+    const r = main ? (type === "A320" ? 0.57 : 0.68) : 0.46,
+      y = -s.gear + r;
+    const attach = -s.ry * 0.65;
+    link([x, attach, z], [x, y + 0.25, z], main ? 0.18 : 0.11);
+    link([x, y + 0.25, z], [x, y + 1.1, z], main ? 0.13 : 0.08, shared.white);
+    link([x + 1.25, attach, z], [x, y + 0.6, z], 0.085);
+    if (axles > 1)
+      link(
+        [x - (axles - 1) * 0.56, y, z],
+        [x + (axles - 1) * 0.56, y, z],
+        0.17,
+        shared.dark,
+      );
+    for (let a = 0; a < axles; a++) {
+      const wx = x + (a - (axles - 1) / 2) * 1.12;
+      link([wx, y, z - 0.48], [wx, y, z + 0.48], 0.12);
+      for (const side of [-1, 1]) wheel(wx, y, z + side * 0.43, r);
+    }
+    const door = new T.Mesh(
+      new T.BoxGeometry(main ? 1.15 : 0.6, main ? 1.1 : 0.85, 0.065),
+      shared.white,
+    );
+    door.position.set(x, attach - 0.35, z + (z < 0 ? -0.3 : 0.3));
+    gear.add(door);
   }
+  group.userData.wheelCount = gearLayout.reduce((n, g) => n + g[2] * 2, 0);
   group.add(gear);
   const nav = new T.Group();
   nav.name = "nav";
   for (const [x, y, z, color] of [
-    [-L * 0.26, 2.6, -S, 0xff2929],
-    [-L * 0.26, 2.6, S, 0x62ffbc],
+    [wingStations[type].at(-1)[1], wingStations[type].at(-1)[3], -S, 0xff2929],
+    [wingStations[type].at(-1)[1], wingStations[type].at(-1)[3], S, 0x62ffbc],
     [-L * 0.49, 1, 0, 0xffffff],
   ]) {
     const m = new T.Mesh(
@@ -647,6 +762,7 @@ export function aircraft(airline = "BA", type = "B789") {
   if (parked) type = type ? "A388" : "B789";
   const imported = detailedAircraft(airline, type, parked);
   if (imported) return imported;
+  if (type === "A20N") type = "A320";
   if (!AIRFRAMES[type]) type = "B789";
   const key = airline + type;
   if (!cache.has(key)) cache.set(key, build(airline, type));

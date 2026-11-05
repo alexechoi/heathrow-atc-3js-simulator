@@ -5,17 +5,36 @@ const models = new Map();
 export async function loadAircraftModels() {
   const loader = new GLTFLoader();
   await Promise.all(
-    ["BA", "VS"].flatMap((airline) =>
-      [false, true].map(async (parked) => {
+    [
+      ...["BA", "VS"].flatMap((airline) =>
+        [false, true].map((parked) => ({
+          airline,
+          parked,
+          type: "B789",
+          directory: "787",
+          groundHeight: 5.5,
+          source: "FlightGear 787-family",
+        })),
+      ),
+      {
+        airline: "BA",
+        parked: false,
+        type: "A20N",
+        directory: "a320",
+        groundHeight: 3.8,
+        source: "FlightGear A320-family",
+      },
+    ].map(
+      async ({ airline, parked, type, directory, groundHeight, source }) => {
         const { scene } = await loader.loadAsync(
-          `/assets/models/787/${airline}${parked ? "-parked" : ""}.glb`,
+          `/assets/models/${directory}/${airline}${parked ? "-parked" : ""}.glb`,
         );
         scene.updateMatrixWorld(true);
         const groups = new Map();
         scene.traverse((o) => {
           if (!o.isMesh) return;
           const part =
-            /gear|wheel|compressor|hyd[12]|nosedoor/i.test(o.name) &&
+            /gear|wheel|compressor|hyd[12]|nosedoor|^MLG|^NLG/i.test(o.name) &&
             !/bay/i.test(o.name)
               ? "gear"
               : /beaconlenz|navlite|strobe/i.test(o.name)
@@ -35,10 +54,10 @@ export async function loadAircraftModels() {
         });
         const root = new T.Group();
         root.userData = {
-          type: "B789",
+          type,
           airline,
-          groundHeight: 5.5,
-          source: "FlightGear 787-family",
+          groundHeight,
+          source,
           parked,
         };
         const gear = new T.Group();
@@ -54,12 +73,13 @@ export async function loadAircraftModels() {
           (part === "gear" ? gear : part === "nav" ? nav : root).add(mesh);
           geometries.forEach((g) => g.dispose());
         }
-        models.set(airline + (parked ? "-parked" : ""), root);
-      }),
+        models.set(type + airline + (parked ? "-parked" : ""), root);
+      },
     ),
   );
 }
 export function detailedAircraft(airline, type, parked = false) {
-  if (type !== "B789") return null;
-  return models.get(airline + (parked ? "-parked" : ""))?.clone(true) || null;
+  return (
+    models.get(type + airline + (parked ? "-parked" : ""))?.clone(true) || null
+  );
 }

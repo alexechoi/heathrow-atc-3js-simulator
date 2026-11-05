@@ -92,7 +92,7 @@ const templates = [
   ["BAW283", "Los Angeles", "B789", "BA", 3600, 180, 710],
   ["VIR12", "Boston", "A35K", "VS", 5200, 340, -1700],
   ["UAE7", "Dubai", "A388", "EK", 6700, 550, 1800],
-  ["BAW472", "Barcelona", "A320", "BA", -3700, 650, -2800],
+  ["BAW472", "Barcelona", "A20N", "BA", -3700, 650, -2800],
   ["SIA322", "Singapore", "B77W", "SQ", -5800, 800, 2400],
 ];
 function flight(t, id = t[0]) {

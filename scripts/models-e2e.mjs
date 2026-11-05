@@ -30,7 +30,7 @@ try {
     "VS-A35K",
     "EK-A388",
     "SQ-B77W",
-    "BA-A320",
+    "BA-A20N",
     "T5A",
     "T5B",
     "T5C",

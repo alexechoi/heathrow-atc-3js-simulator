@@ -40,8 +40,8 @@ export function bodyLivery(airline, spec) {
   const x = (v) => (v / L + 0.5) * W;
   const row = (height, side) =>
     ((side > 0
-      ? Math.acos(height / spec.ry)
-      : 2 * Math.PI - Math.acos(height / spec.ry)) /
+      ? Math.acos(T.MathUtils.clamp(height / spec.ry, -1, 1))
+      : 2 * Math.PI - Math.acos(T.MathUtils.clamp(height / spec.ry, -1, 1))) /
       (2 * Math.PI)) *
     H;
   if (airline === "BA") {
@@ -73,12 +73,18 @@ export function bodyLivery(airline, spec) {
         4,
       );
     }
-    const doors =
+    const defaultDoors =
       spec.type === "A320"
         ? [-0.32, -0.08, 0.08, 0.33]
         : [-0.35, -0.13, 0.12, 0.34];
     const heights = spec.type === "A388" ? [-0.7, 1.7] : [0.65];
     for (const height of heights) {
+      const doors =
+        spec.type === "A388"
+          ? height > 0
+            ? [-0.29, -0.08, 0.17]
+            : [-0.34, -0.16, 0.04, 0.25, 0.39]
+          : defaultDoors;
       for (
         let xx = -L * 0.36;
         xx < L * 0.36;
@@ -124,6 +130,38 @@ export function bodyLivery(airline, spec) {
         ctx.fillRect(x(d * L) - 5, yy - hh * 0.25, 10, 3);
       }
     }
+    if (airline === "EK") {
+      const stripe = (color, points) => {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        points.forEach(([xx, yy], i) => {
+          const a = x(L * xx),
+            b = row(yy, side);
+          if (i) ctx.lineTo(a, b);
+          else ctx.moveTo(a, b);
+        });
+        ctx.closePath();
+        ctx.fill();
+      };
+      stripe("#d01838", [
+        [-0.25, -1.7],
+        [-0.32, -1.3],
+        [-0.43, 3.9],
+        [-0.36, 3.9],
+      ]);
+      stripe("#147746", [
+        [-0.33, -1.3],
+        [-0.37, -0.7],
+        [-0.47, 3.9],
+        [-0.43, 3.9],
+      ]);
+      stripe("#20272b", [
+        [-0.29, -1.55],
+        [-0.33, -1.3],
+        [-0.43, 3.9],
+        [-0.39, 3.9],
+      ]);
+    }
     let logo = art[`${airline.toLowerCase()}-logo`];
     if (logo) {
       const source = logo,
@@ -151,15 +189,15 @@ export function bodyLivery(airline, spec) {
     ctx.save();
     const titleX = x(L * 0.14),
       titleY = row(
-        airline === "BA" ? -0.4 : spec.type === "A388" ? 0.75 : 1.72,
+        airline === "BA" ? -0.4 : spec.type === "A388" ? 0.1 : 1.72,
         side,
       );
     ctx.translate(titleX, titleY);
     ctx.scale(side > 0 ? 1 : -1, side > 0 ? 1 : -1);
     if (airline === "EK") {
       if (logo) {
-        ctx.drawImage(logo, 0, 340, 2048, 172, -W * 0.18, -28, W * 0.36, 56);
-        ctx.drawImage(logo, 0, 0, 2048, 340, W * 0.19, -36, 90, 28);
+        ctx.drawImage(logo, 0, 340, 2048, 172, -W * 0.18, -59, W * 0.36, 118);
+        ctx.drawImage(logo, 0, 0, 2048, 340, -W * 0.25, -67, 230, 51);
       }
     } else if (logo) {
       const width =

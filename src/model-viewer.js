@@ -117,15 +117,14 @@ const entries = [
     note: "Procedural study with raked wingtips, large nacelles, six-wheel bogies and the Singapore cheatline.",
   },
   {
-    id: "BA-A320",
+    id: "BA-A20N",
     category: "aircraft",
     title: "British Airways",
-    subtitle: "Airbus A320",
+    subtitle: "Airbus A320neo",
     airline: "BA",
-    type: "A320",
-    reference:
-      "https://commons.wikimedia.org/wiki/Category:Airbus_A320_of_British_Airways",
-    note: "A separately dimensioned narrowbody study, with a shorter fuselage, two-wheel main gear and a smaller wing.",
+    type: "A20N",
+    reference: "https://github.com/legoboyvdlp/A320-family",
+    note: "FlightGear A320-family exterior. BA G-TTNR paint, LEAP-1A engines, sharklets and detailed undercarriage.",
   },
   ...Object.entries(TERMINAL_MODELS).map(([id, info]) => ({
     id,
@@ -312,8 +311,8 @@ function select(id) {
   $("#model-dimensions").textContent = dims;
   $("#model-scale").textContent = dims.toUpperCase();
   $("#model-credit").textContent =
-    selected.type === "B789"
-      ? "787 geometry & livery: FlightGear 787-family contributors · GPL-2.0 · Source and conversion included in repository."
+    selected.type === "B789" || selected.type === "A20N"
+      ? `Geometry & livery: FlightGear ${selected.type === "A20N" ? "A320-family" : "787-family"} contributors · GPL-2.0 · Source and conversion included in repository.`
       : "Original procedural model · Geometry references © OpenStreetMap contributors · Airline trademarks belong to their owners.";
   $("#model-list").innerHTML = entries
     .filter((e) => e.category === category)
