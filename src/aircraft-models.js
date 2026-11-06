@@ -1,9 +1,10 @@
 import * as T from "three";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 const models = new Map();
 export async function loadAircraftModels() {
-  const loader = new GLTFLoader();
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   await Promise.all(
     [
       ...["BA", "VS"].flatMap((airline) =>
@@ -27,7 +28,7 @@ export async function loadAircraftModels() {
     ].map(
       async ({ airline, parked, type, directory, groundHeight, source }) => {
         const { scene } = await loader.loadAsync(
-          `/assets/models/${directory}/${airline}${parked ? "-parked" : ""}.glb`,
+          `/assets/models/${directory}/${airline}${parked ? "-parked" : ""}.glb?v=${__MODEL_ASSET_VERSION__}`,
         );
         scene.updateMatrixWorld(true);
         const groups = new Map();
@@ -44,7 +45,30 @@ export async function loadAircraftModels() {
           const key = part + ":" + o.material.uuid;
           if (!groups.has(key))
             groups.set(key, { part, material: o.material, geometries: [] });
-          const geometry = o.geometry.clone().applyMatrix4(o.matrixWorld);
+          const geometry = o.geometry.clone();
+          // Meshopt files can have normalized integer attributes. Bake to float
+          // before applying world transforms so metre coordinates never overflow.
+          for (const [name, attribute] of Object.entries(geometry.attributes)) {
+            if (
+              attribute.array instanceof Float32Array &&
+              !attribute.isInterleavedBufferAttribute
+            )
+              continue;
+            const values = new Float32Array(
+              attribute.count * attribute.itemSize,
+            );
+            for (let i = 0; i < attribute.count; i++)
+              for (let k = 0; k < attribute.itemSize; k++)
+                values[i * attribute.itemSize + k] = attribute.getComponent(
+                  i,
+                  k,
+                );
+            geometry.setAttribute(
+              name,
+              new T.Float32BufferAttribute(values, attribute.itemSize),
+            );
+          }
+          geometry.applyMatrix4(o.matrixWorld);
           groups
             .get(key)
             .geometries.push(

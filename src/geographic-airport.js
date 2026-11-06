@@ -410,7 +410,8 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     const dir = new T.Vector2(p[0] - q[0], p[1] - q[1]).normalize();
     const x = p[0] - dir.x * 29,
       z = p[1] - dir.y * 29;
-    const plane = aircraft(parkedCount % 7 === 0 ? "VS" : "BA", false);
+    // T5 is British Airways: keep Virgin tails out of its main and satellites.
+    const plane = aircraft(x > -700 && parkedCount % 7 === 0 ? "VS" : "BA", false);
     plane.position.set(x, plane.userData.groundHeight || 5, z);
     plane.rotation.y = -Math.atan2(dir.y, dir.x);
     parked.add(plane);

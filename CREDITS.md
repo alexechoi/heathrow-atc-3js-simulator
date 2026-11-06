@@ -64,3 +64,7 @@ The directory includes the upstream licence, an adaptation notice and the corres
 ## A320neo exterior
 
 The British Airways A320neo G-TTNR model is adapted from [FlightGear A320-family](https://github.com/legoboyvdlp/A320-family), revision `fec1ecba767c8fffd145337b27012e89c01e3ade`. Copyright Josh Davidson, Jonathan Redpath, merspieler, Matthew Maring, Thorsten Herrmann, Semir Gebran and contributors. The exterior geometry and airline textures retain **GPL-2.0**. Licence, attribution and the corresponding source archive are bundled in [`public/assets/models/a320/`](public/assets/models/a320/README.txt). The conversion script is `scripts/convert-a320.py`; it excludes the flightdeck, aircraft systems, alternate fences, optional Wi-Fi fairings and blurred fan meshes.
+
+## Release asset encoding
+
+Aircraft GLBs use Meshopt compression and WebP textures, retaining their mesh topology and 2K livery dimensions. The post-conversion script is `scripts/optimize-models.mjs`; corresponding source archives include it and the locked dependency manifest. Quantized coordinates are expanded before runtime world transforms. Smaller WebP alternatives to the bundled Poly Haven JPEG surfaces are generated with `scripts/optimize-textures.mjs`; the original JPEG sources remain alongside them. No texture is resized in this encoding step.

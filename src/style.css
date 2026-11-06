@@ -1308,3 +1308,62 @@ body.drawing #world {
     display: none;
   }
 }
+
+/* The opening screen must leave room for the airport, especially on phones. */
+@media (max-width: 700px) {
+  body:not(.playing) .traffic {
+    display: none;
+  }
+  body:not(.playing) #labels {
+    display: none;
+  }
+  #loading {
+    padding: 28px;
+  }
+  #loading h2 {
+    font-size: 34px;
+  }
+  #loading-detail {
+    max-width: 320px;
+    line-height: 1.7;
+  }
+}
+#load-retry[hidden] {
+  display: none;
+}
+.load-failed .loading-track {
+  display: none;
+}
+#loading.load-failed h2 {
+  font-size: 32px;
+}
+#loading-detail {
+  max-width: 460px;
+  line-height: 1.6;
+}
+.no-script {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  background: #10252b;
+  z-index: 50;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+  .loading-track i {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
+
+.result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#result-copy { width: 100%; min-height: 100px; margin-top: 12px; padding: 10px; color: var(--mint); background: #102025; border: 1px solid #6a8b7c; font: inherit; font-size: 12px; line-height: 1.5; }
+#result-copy[hidden] { display: none; }

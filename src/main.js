@@ -1,3 +1,4 @@
+import { readBest, saveBest, resultText } from "./shift-results.js";
 import { createIncidentEffect } from "./incident-effects.js";
 import * as T from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -24,6 +25,8 @@ const AIRLINES = {
   SQ: "Singapore Airlines",
 };
 let trafficFilter = "arrival";
+let bestScore = readBest();
+let reportShown = false;
 const canvas = $("#world");
 let renderer;
 try {
@@ -31,7 +34,7 @@ try {
     canvas,
     antialias: true,
     powerPreference: "high-performance",
-    preserveDrawingBuffer: true,
+    preserveDrawingBuffer: new URLSearchParams(location.search).has("capture"),
   });
 } catch (e) {
   $("#intro").innerHTML =
@@ -112,12 +115,12 @@ const atmosphere = new T.Mesh(
 scene.add(atmosphere);
 $("#loading-detail").textContent =
   "Loading surface materials and satellite imagery…";
-await Promise.all([
+const [, , , geography] = await Promise.all([
   loadMaterials(),
   loadAirlineMarkings(),
   loadAircraftModels(),
+  loadGeography(),
 ]);
-const geography = await loadGeography();
 $("#loading-detail").textContent = "Opening the tower…";
 const airport = buildGeographicAirport(scene, geography);
 const post = createPostProcessing(renderer, scene, camera);
@@ -135,7 +138,7 @@ let playing = false,
   cinematic = false,
   cinemaTime = 0,
   day = "golden",
-  previousDay = "golden",
+  savedShift = null,
   sound = false,
   drawing = false,
   drawPoints = [],
@@ -269,8 +272,7 @@ function start(reset = true) {
   document.body.classList.add("playing");
   sim.demo = false;
   if (reset) setView("overview");
-  paused = false;
-  $("#pause").innerHTML = '<i class="pause-icon"></i>';
+  setPaused(false);
   $("#intro").classList.add("hidden");
   $("#game-stats").classList.remove("hidden");
   $("#command").classList.remove("hidden");
@@ -279,6 +281,9 @@ function start(reset = true) {
   toast("Heathrow control: arrivals, ground and tower are on your desk.");
   $("#shift-report").classList.add("hidden");
   clearIncident();
+  reportShown = false;
+  $("#copy-result").textContent = "Copy result";
+  $("#result-copy").hidden = true;
   updateUI();
 }
 function clearModels() {
@@ -313,6 +318,17 @@ function setView(v) {
   if (v === "follow") {
     camera.position.set(p.x + 125, p.y + 70, p.z + 145);
     controls.target.set(p.x, p.y, p.z);
+  }
+  controls.update();
+}
+function setIntroView() {
+  setView("overview");
+  if (innerWidth < 700) {
+    camera.position.set(-1150, 260, 800);
+    controls.target.set(-1800, 20, -120);
+  } else {
+    camera.position.set(-600, 260, 650);
+    controls.target.set(-1500, 15, 100);
   }
   controls.update();
 }
@@ -386,7 +402,14 @@ const shots = [
 ];
 const filmDuration = shots.reduce((a, s) => a + s.duration, 0);
 function enterFilm() {
-  previousDay = day;
+  if (cinematic) return;
+  // reset() replaces simulation collections; retain the original objects so
+  // routes, Sets and THREE.Vector3 trails survive the preview unchanged.
+  savedShift = {
+    simulation: { ...sim }, selectedId, trafficFilter, view, paused, day,
+    position: camera.position.clone(), target: controls.target.clone(),
+    clean: document.body.classList.contains("clean"),
+  };
   cinematic = true;
   scene.fog.density = 0.000095;
   holdChart.visible = false;
@@ -403,18 +426,29 @@ function enterFilm() {
   paused = false;
 }
 function exitFilm() {
-  setDay(previousDay);
+  if (!cinematic || !savedShift) return;
+  const saved = savedShift;
   cinematic = false;
-  controls.enabled = true;
+  Object.assign(sim, saved.simulation);
+  selectedId = saved.selectedId;
+  trafficFilter = saved.trafficFilter;
+  setDay(saved.day);
+  setView(saved.view);
+  camera.position.copy(saved.position);
+  controls.target.copy(saved.target);
+  controls.update();
+  setPaused(saved.paused);
+  document.body.classList.toggle("clean", saved.clean);
   $("#interface").classList.remove("hidden");
   $("#labels").classList.remove("hidden");
   $("#film").classList.add("hidden");
-  sim.reset(!playing);
   clearModels();
-  selectedId = sim.planes[0].id;
-  setView("overview");
+  clearIncident();
+  redrawRoutes();
+  savedShift = null;
   updateUI();
 }
+
 function cinema(t) {
   let tt = t % filmDuration,
     idx = 0;
@@ -461,6 +495,10 @@ function cinema(t) {
 function updateModels(dt) {
   const active = new Set();
   const radarLabels = [];
+  const mobileLabelBounds = innerWidth < 800 && playing ? {
+    top: Math.max($("header").getBoundingClientRect().bottom, $(".traffic").getBoundingClientRect().bottom) + 42,
+    bottom: $("#command").classList.contains("hidden") ? innerHeight - 130 : $("#command").getBoundingClientRect().top - 8,
+  } : null;
   for (const p of sim.planes) {
     if (FINISHED.has(p.state)) continue;
     active.add(p.id);
@@ -498,6 +536,11 @@ function updateModels(dt) {
       projected.z > 1 ||
       Math.abs(projected.x) > 1 ||
       Math.abs(projected.y) > 1 ||
+      (mobileLabelBounds && (
+        (-projected.y * .5 + .5) * innerHeight < mobileLabelBounds.top ||
+        (-projected.y * .5 + .5) * innerHeight > mobileLabelBounds.bottom ||
+        Math.abs(projected.x) > .8
+      )) ||
       (view === "radar" &&
         camera.position.y > 12000 &&
         p.kind === "departure" &&
@@ -657,8 +700,7 @@ function updateUI() {
     b.classList.toggle("active", b.dataset.traffic === trafficFilter),
   );
   const listed = trafficFilter === "departure" ? departures : arrivals;
-  $("#flight-list").innerHTML =
-    listed
+  const rowMarkup = listed
       .map((p) => {
         const alert = [...sim.conflicts, ...sim.runwayConflicts].some((c) =>
           c.split("/").includes(p.id),
@@ -674,9 +716,28 @@ function updateUI() {
         return `<button class="flight-row ${p.id === selectedId ? "selected" : ""}" data-flight="${p.id}"><span class="airline-mark" title="${AIRLINES[p.airline]}"><img src="/assets/airlines/${p.airline}.png" alt="${AIRLINES[p.airline]}" width="32" height="32"></span><span class="flight-info"><b>${p.id}</b><small>${p.kind === "departure" ? "To " : ""}${p.origin} · ${p.kind === "departure" ? `STAND ${p.stand}` : p.holdName || p.type}</small></span><span class="flight-data">${p.y < 15 ? p.runway || "GROUND" : Math.round((p.y * 3.281) / 100) * 100}<small class="${alert ? "alert" : ""}">${alert ? "CONFLICT" : status}</small></span></button>`;
       })
       .join("") || '<p class="traffic-empty">Next flight is on its way.</p>';
-  $$("[data-flight]").forEach(
-    (b) => (b.onclick = () => select(b.dataset.flight)),
-  );
+  // Reuse the button itself: updating traffic must not swallow a click or
+  // move keyboard focus to the document every 350 ms.
+  const list = $("#flight-list");
+  const template = document.createElement("template");
+  template.innerHTML = rowMarkup;
+  const wanted = new Set(listed.map((p) => p.id));
+  for (const child of [...list.children])
+    if (!wanted.has(child.dataset.flight)) child.remove();
+  [...template.content.children].forEach((fresh, index) => {
+    let row = [...list.children].find(
+      (child) => child.dataset.flight === fresh.dataset.flight,
+    );
+    if (!row) {
+      row = fresh;
+      if (row.dataset.flight) row.onclick = () => select(row.dataset.flight);
+    } else {
+      row.className = fresh.className;
+      if (row.innerHTML !== fresh.innerHTML) row.innerHTML = fresh.innerHTML;
+    }
+    if (list.children[index] !== row)
+      list.insertBefore(row, list.children[index] || null);
+  });
   $("#landed").textContent = String(sim.landed).padStart(2, "0");
   $("#departed").textContent = String(sim.departed).padStart(2, "0");
   $("#score").textContent = String(sim.score).padStart(4, "0");
@@ -685,7 +746,7 @@ function updateUI() {
   if (playing)
     $("#mode-label").textContent = sim.over
       ? "SHIFT ENDED"
-      : "YOU HAVE CONTROL";
+      : paused ? "PAUSED · PRESS PLAY TO RESUME" : "YOU HAVE CONTROL";
   $("#separation-status").textContent = sim.over
     ? "SHIFT ENDED"
     : alert
@@ -694,6 +755,13 @@ function updateUI() {
   $("#separation-status").style.color = alert || sim.over ? "#ffa494" : "";
   if (!selected() && active.length) selectedId = (listed[0] || active[0]).id;
   const p = selected();
+  if (!drawing && p) {
+    $("#tip").textContent = p.kind === "departure"
+      ? "Ground → Tower → London Departure. Follow the clearance below."
+      : sim.landed === 0 && !p.runway && p.id === sim.planes[0]?.id
+        ? `First arrival: select 27L to clear ${p.id}.`
+        : "Keep final clear. Check Departures while arrivals are inbound.";
+  }
   $("#command").classList.toggle("hidden", !playing || !p || sim.over);
   if (p) {
     const departure = p.kind === "departure";
@@ -769,7 +837,13 @@ function updateUI() {
     $("#draw").disabled = departure || !controllable;
   }
   $("#shift-report").classList.toggle("hidden", !sim.over || cinematic);
+  if (playing && !cinematic) bestScore = saveBest(sim.score, bestScore);
   if (sim.over) {
+    $("#best-result").textContent = `Personal best on this browser: ${bestScore} points`;
+    if (!reportShown && !cinematic) {
+      reportShown = true;
+      $("#retry-shift").focus({ preventScroll: true });
+    }
     $("#shift-reason").textContent = sim.reason;
     $("#shift-result").textContent =
       `${sim.landed} landed · ${sim.departed} departed · ${sim.score} points`;
@@ -823,6 +897,20 @@ $$("[data-traffic]").forEach(
     }),
 );
 $("#retry-shift").onclick = () => start();
+$("#copy-result").onclick = async () => {
+  const text = resultText(sim);
+  try {
+    await navigator.clipboard.writeText(text);
+    $("#copy-result").textContent = "Copied ✓";
+  } catch {
+    const field = $("#result-copy");
+    field.hidden = false;
+    field.value = text;
+    field.focus();
+    field.select();
+    $("#copy-result").textContent = "Select and copy below";
+  }
+};
 $("#start").onclick = () => start();
 $("#restart").onclick = () => start();
 $("#cinematic").onclick = enterFilm;
@@ -857,24 +945,45 @@ $("#draw").onclick = () => {
   toast("Draw a path on the map, then assign the runway.");
   updateUI();
 };
-function togglePause() {
-  paused = !paused;
+function setPaused(value) {
+  paused = value;
+  $("#pause").setAttribute("aria-label", paused ? "Resume simulation" : "Pause simulation");
+  $("#pause").setAttribute("aria-pressed", String(paused));
   $("#pause").innerHTML = paused
     ? '<i class="play-icon"></i>'
     : '<i class="pause-icon"></i>';
+  if (playing) updateUI();
 }
+function togglePause() { setPaused(!paused); }
 $("#pause").onclick = togglePause;
 $("#speed").onclick = () => {
   speed = speed === 1 ? 2 : speed === 2 ? 4 : 1;
   $("#speed").textContent = speed + "×";
 };
 $("#hide-ui").onclick = () => document.body.classList.toggle("clean");
-$("#help").onclick = () => $("#help-dialog").showModal();
+let pausedBeforeHelp = false;
+$("#help").onclick = () => {
+  pausedBeforeHelp = paused;
+  setPaused(true);
+  $("#help-play").textContent = playing ? "Back to your shift →" : "Ready for arrivals →";
+  $("#help-dialog").showModal();
+};
+$("#help-dialog").addEventListener("close", () => {
+  setPaused(pausedBeforeHelp || document.hidden);
+});
 $("#close-help").onclick = () => $("#help-dialog").close();
 $("#help-play").onclick = () => {
   $("#help-dialog").close();
-  start();
+  if (!playing) start();
 };
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && playing && !cinematic && !sim.over) {
+    setPaused(true);
+    pausedBeforeHelp = true;
+    toast("Shift paused while you were away. Press play to resume.");
+  }
+  lastTime = performance.now();
+});
 let pointerDown = false,
   downPos;
 function worldPoint(e) {
@@ -941,7 +1050,7 @@ canvas.addEventListener("pointerup", (e) => {
   }
 });
 window.addEventListener("keydown", (e) => {
-  if (e.target instanceof HTMLInputElement) return;
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target.isContentEditable || $("#help-dialog").open || e.repeat) return;
   if (e.key === "Escape") {
     if (cinematic) exitFilm();
     document.body.classList.remove("clean");
@@ -964,6 +1073,7 @@ window.addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   post.resize(innerWidth, innerHeight);
+  if (!playing && !cinematic) setIntroView();
 });
 renderer.info.autoReset = false;
 const incidentEffect = createIncidentEffect();
@@ -1046,7 +1156,7 @@ function animate(now) {
   lastTime = now;
   requestAnimationFrame(animate);
 }
-setView("follow");
+setIntroView();
 setDay("golden");
 updateUI();
 step(0.016);
@@ -1091,6 +1201,10 @@ window.__HEATHROW__ = {
       drawCalls: renderer.info.render.calls,
       geography: airport.geography,
     };
+  },
+  stopRendering() {
+    manual = true;
+    paused = true;
   },
   captureFrame(t) {
     manual = true;

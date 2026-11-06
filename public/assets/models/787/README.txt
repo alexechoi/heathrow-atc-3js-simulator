@@ -24,3 +24,12 @@ Rebuild from the repository with Blender 4.3:
 blender -b -t 2 --python scripts/convert-flightgear.py -- SOURCE OUTPUT.glb BAW
 Use VIR for Virgin, and append lod for a parked variant. SOURCE is the
 extracted 787-family folder.
+
+Release transport encoding (6 November 2026): Meshopt geometry compression
+and WebP texture encoding at quality 90. Mesh topology and 2048 px texture
+dimensions are retained. Positions use 16-bit quantization; normals 12-bit.
+After the Blender conversions, put the five files in an uncompressed model
+folder with 787/ and a320/ subdirectories, then run from the repository:
+  npm ci
+  MODEL_INPUT=work/uncompressed-models MODEL_OUTPUT=public/assets/models node scripts/optimize-models.mjs
+The encoding script and locked JavaScript dependencies are included in source/.

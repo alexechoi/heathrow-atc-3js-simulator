@@ -29,17 +29,21 @@ export async function loadGeography() {
     if (!r.ok) throw new Error("Airport geometry unavailable");
     return r.json();
   });
+  // Imagery is optional: a blocked tile service must not block the game.
+  const deadline = performance.now() + 8000;
   const loader = new T.TextureLoader();
   const timed = (url) =>
     new Promise((resolve, reject) => {
+      let expired = false;
       const timer = setTimeout(
-        () => reject(new Error("Imagery tile timed out")),
-        15000,
+        () => { expired = true; reject(new Error("Imagery tile timed out")); },
+        Math.max(1, Math.min(3500, deadline - performance.now())),
       );
       loader.loadAsync(url).then(
         (t) => {
           clearTimeout(timer);
-          resolve(t);
+          if (expired) t.dispose();
+          else resolve(t);
         },
         (e) => {
           clearTimeout(timer);
@@ -76,7 +80,7 @@ export async function loadGeography() {
       )
         tasks.push({ row, col });
     async function worker() {
-      while (tasks.length) {
+      while (tasks.length && performance.now() < deadline) {
         const { row, col } = tasks.shift();
         let tex = null,
           parent = false;
@@ -84,6 +88,7 @@ export async function loadGeography() {
           "server.arcgisonline.com",
           "services.arcgisonline.com",
         ]) {
+          if (performance.now() >= deadline) break;
           try {
             tex = await timed(
               `https://${host}/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${row}/${col}`,
@@ -91,7 +96,7 @@ export async function loadGeography() {
             break;
           } catch {}
         }
-        if (!tex) {
+        if (!tex && performance.now() < deadline) {
           try {
             tex = await timed(
               `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom - 1}/${Math.floor(row / 2)}/${Math.floor(col / 2)}`,
@@ -117,7 +122,8 @@ export async function loadGeography() {
       }
     }
     await Promise.all(Array.from({ length: 12 }, worker));
-    if (missing) throw new Error(`${missing} satellite tiles unavailable`);
+    if (missing || tasks.length)
+      throw new Error(`${missing} satellite tiles unavailable`);
     const texture = new T.CanvasTexture(canvas);
     texture.userData.tiles = completed;
     return texture;
