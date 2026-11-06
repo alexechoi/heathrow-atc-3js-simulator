@@ -84,7 +84,8 @@ test("runway points descend and finish west of threshold", () => {
     s.planes = [arrival];
     s.spawnAt = s.departureAt = Infinity;
     s.clear(arrival, id);
-    for (let i = 0; i < 3000 && arrival.state === "approach"; i++) s.tick(0.1);
+    for (let i = 0; i < 3000 && arrival.state === "approach"; i++)
+      s.tick(0.1);
     assert.equal(arrival.state, "rollout");
     assert.ok(
       arrival.x <= RUNWAYS[id].threshold - 200,

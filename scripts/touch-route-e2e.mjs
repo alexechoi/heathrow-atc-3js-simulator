@@ -6,6 +6,8 @@ try {
     ...captureContext,
     viewport: { width: 390, height: 667 },
     hasTouch: true,
+    isMobile: true,
+    deviceScaleFactor: 3,
   });
   await p.goto(
     (process.env.TEST_URL || "http://localhost:4173/") + "?capture",
@@ -14,6 +16,17 @@ try {
   await p.waitForFunction(() => window.__HEATHROW__?.ready, null, {
     timeout: 180000,
   });
+  assert.equal(await p.locator("#graphics-quality").inputValue(), "smooth");
+  assert.equal(
+    await p.evaluate(() => __HEATHROW__.renderer.getPixelRatio()),
+    1.25,
+    "High-DPI phones respect the Smooth rendering budget",
+  );
+  assert.equal(
+    await p.evaluate(() => document.body.classList.contains("smooth-graphics")),
+    true,
+    "A new phone session starts with the lighter renderer",
+  );
   await p.click("#start");
   await p.click("#draw");
   const cdp = await p.context().newCDPSession(p);
@@ -44,7 +57,9 @@ try {
   assert.equal(state.drawing, false);
   await settleFrame(p);
   await p.screenshot({ path: "work/screenshots/mobile-touch-route.png" });
-  console.log(JSON.stringify({ touchDrawing: true, ...state }));
+  console.log(
+    JSON.stringify({ touchDrawing: true, phoneGraphics: "smooth", ...state }),
+  );
 } finally {
   await b.close();
 }

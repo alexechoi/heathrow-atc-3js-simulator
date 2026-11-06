@@ -244,6 +244,27 @@ diffuseColor.rgb*=1.-seam*.09;
     },
   );
 }
+export function flatRoofMaterial() {
+  return worldShader(
+    new T.MeshStandardMaterial({ color: 0x8c9694, roughness: 0.94 }),
+    { uRoofSurface: { value: textures.concrete_floor_02_diff } },
+    "uniform sampler2D uRoofSurface;",
+    (s) => {
+      s.fragmentShader = s.fragmentShader.replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+float grain=dot(texture2D(uRoofSurface,vSurfaceWorld.xz/7.).rgb,vec3(.3,.59,.11));
+diffuseColor.rgb*=clamp(.8+grain*1.4,.78,1.2);
+vec2 panel=vSurfaceWorld.xz/3.;
+vec2 edge=min(fract(panel),1.-fract(panel));
+vec2 aa=max(fwidth(panel),vec2(.0001));
+float seam=1.-smoothstep(.006,.006+aa.x,edge.x)*smoothstep(.006,.006+aa.y,edge.y);
+diffuseColor.rgb*=1.-seam*.06;
+`,
+      );
+    },
+  );
+}
 export function runwayMaterial(color = 0x343938, concrete = false) {
   return worldShader(
     new T.MeshStandardMaterial({ color, roughness: 0.94, side: T.DoubleSide }),

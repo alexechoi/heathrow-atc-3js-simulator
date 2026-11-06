@@ -36,6 +36,7 @@ try {
     "T5C",
     "T2B",
     "T2A",
+    "T3",
   ]) {
     await p.evaluate((id) => {
       const a = window.__MODELS__;
@@ -126,7 +127,7 @@ try {
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
-      models: 11,
+      models: 12,
       views: true,
       wireframe: true,
       mobile: true,

@@ -9,6 +9,7 @@ import {
   loadAircraftModels,
 } from "./aircraft.js";
 import { buildTerminals, TERMINAL_MODELS } from "./terminal-architecture.js";
+import { mappedShape, roofEquipmentSites } from "./mapped-shape.js";
 import {
   loadMaterials,
   facadeMaterial,
@@ -16,6 +17,7 @@ import {
   claddingMaterial,
   wallMaterial,
   runwayMaterial,
+  flatRoofMaterial,
 } from "./materials.js";
 import "./model-viewer.css";
 const $ = (s) => document.querySelector(s),
@@ -53,11 +55,35 @@ ground.rotation.x = -Math.PI / 2;
 ground.position.y = -0.08;
 ground.receiveShadow = true;
 scene.add(ground);
-await Promise.all([
+const [, , , geography] = await Promise.all([
   loadAirlineMarkings(),
   loadAircraftModels(),
   loadMaterials(),
+  fetch("/data/heathrow.json").then((r) => {
+    if (!r.ok) throw Error("Mapped terminal geometry unavailable");
+    return r.json();
+  }),
 ]);
+const t3Buildings = geography.buildings.filter(
+  (b) =>
+    b.terminal &&
+    (b.name.startsWith("Terminal 3") ||
+      b.name === "T3IB" ||
+      b.id === 151628006),
+);
+const t3Points = t3Buildings.flatMap((b) => b.points);
+const t3MinX = Math.min(...t3Points.map((p) => p[0]));
+const t3MaxX = Math.max(...t3Points.map((p) => p[0]));
+const t3MinZ = Math.min(...t3Points.map((p) => p[1]));
+const t3MaxZ = Math.max(...t3Points.map((p) => p[1]));
+const terminalDimensions = {
+  ...TERMINAL_MODELS,
+  T3: {
+    center: [(t3MinX + t3MaxX) / 2, (t3MinZ + t3MaxZ) / 2],
+    width: Math.round(t3MaxX - t3MinX),
+    length: Math.round(t3MaxZ - t3MinZ),
+  },
+};
 const hdr = await new HDRLoader().loadAsync("/assets/sky.hdr");
 hdr.mapping = T.EquirectangularReflectionMapping;
 scene.environment = hdr;
@@ -146,6 +172,15 @@ const entries = [
             : "https://commons.wikimedia.org/wiki/File:Heathrow_Terminal_2B_-_geograph.org.uk_-_5251719.jpg",
     note: "Photo-referenced procedural architecture over the mapped footprint. Articulated jet bridges, roof structure, glazing and service levels. Not a surveyed digital twin.",
   })),
+  {
+    id: "T3",
+    category: "terminals",
+    title: "Terminal 3",
+    subtitle: "Mapped main terminal and piers",
+    reference:
+      "https://commons.wikimedia.org/wiki/File:Heathrow_Airport_Terminal_3_from_the_air_-_geograph.org.uk_-_5145240.jpg",
+    note: "Mapped concourses, annexes and open courtyard. Flat roofs and glazed bands follow the aerial reference. Heights are estimated; facade detailing remains simplified.",
+  },
 ];
 let model,
   selected,
@@ -167,7 +202,7 @@ function terminal(id) {
     white: new T.MeshStandardMaterial({ color: 0xe2e5df, roughness: 0.55 }),
     dark: new T.MeshStandardMaterial({ color: 0x253036, roughness: 0.6 }),
     paint: new T.MeshStandardMaterial({ color: 0xe1e4dc, roughness: 0.8 }),
-    gravel: new T.MeshStandardMaterial({ color: 0x8c8273, roughness: 1 }),
+    gravel: flatRoofMaterial(),
     rooflight: new T.MeshStandardMaterial({
       color: 0x799798,
       roughness: 0.3,
@@ -186,7 +221,26 @@ function terminal(id) {
     put(new T.BoxGeometry(w, h, d), mat, x, y, z, ry);
   const cyl = (x, y, z, r, h, mat = "steel", n = 10) =>
     put(new T.CylinderGeometry(r, r, h, n), mat, x, y, z);
-  buildTerminals({ put, box, cyl }, id);
+  if (id === "T3") {
+    for (const b of t3Buildings) {
+      const footprint = mappedShape(b.points, b.holes);
+      const height = Math.max(16, b.height);
+      const walls = new T.ExtrudeGeometry(footprint, {
+        depth: height,
+        bevelEnabled: false,
+        steps: 1,
+      });
+      walls.rotateX(-Math.PI / 2);
+      put(walls, "cladding");
+      const roof = new T.ShapeGeometry(footprint);
+      roof.rotateX(-Math.PI / 2);
+      put(roof, "gravel", 0, height + 0.06, 0);
+      for (const [x, z] of roofEquipmentSites(b)) {
+        box(x, height + 0.8, z, 6, 1.6, 3.2, "dark");
+        box(x, height + 1.7, z, 6.2, 0.2, 3.4, "steel");
+      }
+    }
+  } else buildTerminals({ put, box, cyl }, id);
   for (const [key, geos] of batches) {
     const m = new T.Mesh(mergeGeometries(geos), mats[key]);
     m.castShadow = true;
@@ -194,7 +248,7 @@ function terminal(id) {
     group.add(m);
     geos.forEach((g) => g.dispose());
   }
-  const { center } = TERMINAL_MODELS[id];
+  const { center } = terminalDimensions[id];
   group.position.set(-center[0], 0, -center[1]);
   return group;
 }
@@ -287,7 +341,10 @@ function select(id) {
     scene.remove(model);
     if (model.userData.viewerTerminal)
       model.traverse((o) => {
-        if (o.isMesh) o.geometry.dispose();
+        if (o.isMesh) {
+          o.geometry.dispose();
+          o.material.dispose();
+        }
       });
   }
   model = selected.type
@@ -307,7 +364,7 @@ function select(id) {
   $("#model-reference").href = selected.reference;
   const dims = selected.type
     ? `${AIRFRAMES[selected.type].length.toFixed(2)} m long · ${AIRFRAMES[selected.type].span.toFixed(2)} m span`
-    : `${TERMINAL_MODELS[id].width} m core width · ${TERMINAL_MODELS[id].length} m long`;
+    : `${terminalDimensions[id].width} m ${id === "T3" ? "overall width" : "core width"} · ${terminalDimensions[id].length} m long`;
   $("#model-dimensions").textContent = dims;
   $("#model-scale").textContent = dims.toUpperCase();
   $("#model-credit").textContent =

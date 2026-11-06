@@ -4,17 +4,19 @@ All coordinates use a local, metre-scaled Web Mercator frame at Heathrow.
 """
 import sys,glob,math,json,xml.etree.ElementTree as E,os
 sys.path.insert(0,'work/python-libs')
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, LineString
+from shapely.ops import polygonize, unary_union
 ORIGIN=(-.46064,51.47122); R=6378137; SCALE=math.cos(math.radians(ORIGIN[1]))
 def merc(lon,lat):return R*math.radians(lon),R*math.log(math.tan(math.pi/4+math.radians(lat)/2))
 OX,OY=merc(*ORIGIN)
 def point(lon,lat):
  x,y=merc(lon,lat);return [round((x-OX)*SCALE,1),round(-(y-OY)*SCALE,1)]
-nodes={};ways={}
+nodes={};ways={};relations={}
 for file in glob.glob('work/osm-*.xml'):
  root=E.parse(file).getroot()
  for n in root.findall('node'):nodes[n.attrib['id']]=point(float(n.attrib['lon']),float(n.attrib['lat']))
  for w in root.findall('way'):ways[w.attrib['id']]=w
+ for r in root.findall('relation'):relations[r.attrib['id']]=r
 out={'origin':ORIGIN,'attribution':'© OpenStreetMap contributors','license':'ODbL-1.0','source':'https://www.openstreetmap.org/copyright','buildings':[],'aeroways':[],'roads':[],'woods':[],'grass':[]}
 for id,w in ways.items():
  tags={t.attrib['k']:t.attrib['v'] for t in w.findall('tag')};pts=[nodes[n.attrib['ref']] for n in w.findall('nd') if n.attrib['ref'] in nodes]
@@ -39,6 +41,34 @@ for id,w in ways.items():
   try:h=float(tags.get('height',float(tags.get('building:levels',2))*3.2))
   except:h=8
   h=max(3,min(70,h));out['buildings'].append({'id':int(id),'name':tags.get('name',''),'kind':tags['building'],'terminal':terminal,'height':h,'points':[[round(x,1),round(z,1)] for x,z in poly.exterior.coords]})
+# Some large buildings (including T3) carry their tags on a multipolygon
+# relation, with untagged outer ways. Preserve their courtyards as holes.
+for id,relation in relations.items():
+ tags={t.attrib['k']:t.attrib['v'] for t in relation.findall('tag')}
+ if tags.get('type')!='multipolygon' or not tags.get('building') or tags['building'] in ['roof','construction','ruins']:continue
+ members=[m for m in relation.findall('member') if m.attrib.get('type')=='way']
+ if not members or any(m.attrib['ref'] not in ways for m in members):continue
+ rings={'outer':[],'inner':[]};complete=True
+ for m in members:
+  role=m.attrib.get('role') or 'outer'
+  if role not in rings:continue
+  refs=[n.attrib['ref'] for n in ways[m.attrib['ref']].findall('nd')]
+  if len(refs)<2 or any(n not in nodes for n in refs):complete=False;break
+  rings[role].append(LineString([nodes[n] for n in refs]))
+ if not complete or not rings['outer']:continue
+ outer=unary_union(list(polygonize(unary_union(rings['outer']))))
+ inner=unary_union(list(polygonize(unary_union(rings['inner'])))) if rings['inner'] else None
+ geom=outer.difference(inner) if inner is not None else outer
+ polys=[geom] if geom.geom_type=='Polygon' else list(getattr(geom,'geoms',[]))
+ polys=[p.simplify(.8,preserve_topology=True) for p in polys if p.geom_type=='Polygon' and p.area>=25]
+ if not polys:continue
+ outer_ids={int(m.attrib['ref']) for m in members if m.attrib.get('role','outer') in ['','outer']}
+ out['buildings']=[b for b in out['buildings'] if b['id'] not in outer_ids]
+ try:h=float(tags.get('height',float(tags.get('building:levels',2))*3.2))
+ except:h=8
+ for i,poly in enumerate(polys):
+  roof=poly.representative_point()
+  out['buildings'].append({'id':f'relation/{id}/{i}','sourceType':'relation','sourceId':int(id),'name':tags.get('name',''),'kind':tags['building'],'terminal':tags.get('aeroway')=='terminal','height':max(3,min(70,h)),'points':[[round(x,1),round(z,1)] for x,z in poly.exterior.coords],'holes':[[[round(x,1),round(z,1)] for x,z in ring.coords] for ring in poly.interiors],'roofPoint':[round(roof.x,1),round(roof.y,1)]})
 os.makedirs('public/data',exist_ok=True)
 open('public/data/heathrow.json','w').write(json.dumps(out,separators=(',',':')))
 print({k:len(v) for k,v in out.items() if isinstance(v,list)})

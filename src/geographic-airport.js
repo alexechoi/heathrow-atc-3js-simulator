@@ -9,10 +9,12 @@ import {
   claddingMaterial,
   runwayMaterial,
   turfMaterial,
+  flatRoofMaterial,
 } from "./materials.js";
 import { buildTerminals } from "./terminal-architecture.js";
 import { buildRunwayMarkings } from "./runway-markings.js";
 import { RUNWAYS, GROUND_LAYOUT } from "./simulation.js";
+import { mappedShape as shape, roofEquipmentSites } from "./mapped-shape.js";
 function random(seed = 37) {
   return () => {
     seed = (seed * 1664525 + 1013904223) >>> 0;
@@ -33,7 +35,7 @@ export function buildGeographicAirport(scene, { data, near, far }) {
       roughness: 0.32,
       side: T.DoubleSide,
     }),
-    gravel: new T.MeshStandardMaterial({ color: 0x8d8778, roughness: 1 }),
+    gravel: flatRoofMaterial(),
     runway: runwayMaterial(),
     paint: new T.MeshStandardMaterial({
       color: 0xe4e4d9,
@@ -99,12 +101,6 @@ export function buildGeographicAirport(scene, { data, near, far }) {
   }
   function cyl(x, y, z, r, h, mat = "steel", n = 10) {
     put(new T.CylinderGeometry(r, r, h, n), mat, x, y, z);
-  }
-  function shape(points) {
-    const s = new T.Shape();
-    points.forEach(([x, z], i) => (i ? s.lineTo(x, -z) : s.moveTo(x, -z)));
-    s.closePath();
-    return s;
   }
   const W = 7600,
     H = 5200;
@@ -340,19 +336,26 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     const airportBuilding = Math.abs(cx) < 2400 && cz > -460 && cz < 1550;
     let h = b.height;
     if (b.terminal) h = Math.max(h, 16);
-    const g = new T.ExtrudeGeometry(shape(pts), {
+    const footprint = shape(pts, b.holes);
+    const g = new T.ExtrudeGeometry(footprint, {
       depth: h,
       bevelEnabled: false,
       steps: 1,
     });
     g.rotateX(-Math.PI / 2);
     put(g, airportBuilding ? "cladding" : "house");
-    const roof = new T.ShapeGeometry(shape(pts));
+    const roof = new T.ShapeGeometry(footprint);
     roof.rotateX(-Math.PI / 2);
     put(roof, airportBuilding || h > 12 ? "gravel" : "red", 0, h + 0.06, 0);
-    if (h > 12 && Math.abs(cx) < 2100 && Math.abs(cz) < 1450) {
-      box(cx, h + 1.4, cz, 8, 2.8, 6, "dark");
-      box(cx, h + 2.85, cz, 8.5, 0.2, 6.5, "steel");
+    if (b.terminal) {
+      for (const [x, z] of roofEquipmentSites(b)) {
+        box(x, h + 0.8, z, 6, 1.6, 3.2, "dark");
+        box(x, h + 1.7, z, 6.2, 0.2, 3.4, "steel");
+      }
+    } else if (h > 12 && Math.abs(cx) < 2100 && Math.abs(cz) < 1450) {
+      const [roofX, roofZ] = b.roofPoint || [cx, cz];
+      box(roofX, h + 1.4, roofZ, 8, 2.8, 6, "dark");
+      box(roofX, h + 2.85, roofZ, 8.5, 0.2, 6.5, "steel");
     }
   }
   buildTerminals({ put, box, cyl });
