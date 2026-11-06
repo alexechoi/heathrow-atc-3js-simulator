@@ -84,7 +84,8 @@ export function approachPoints(id) {
   return [
     { x: r.threshold + 2300, y: 180, z: r.z },
     { x: r.threshold + 1200, y: 85, z: r.z },
-    { x: r.threshold + 80, y: 7, z: r.z },
+    // Touch down inside the runway, near the 300 m aiming-point markings.
+    { x: r.threshold - 300, y: 7, z: r.z },
     { x: r.threshold - 1150, y: 5, z: r.z },
   ];
 }

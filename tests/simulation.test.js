@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   Simulation,
   GROUND_LAYOUT,
+  RUNWAYS,
   separationConflict,
   approachPoints,
 } from "../src/simulation.js";
@@ -78,6 +79,17 @@ test("runway points descend and finish west of threshold", () => {
     const p = approachPoints(id);
     assert.ok(p.every((v, i) => !i || v.y <= p[i - 1].y));
     assert.ok(p.at(-1).x < p[0].x);
+    const s = new Simulation();
+    const arrival = s.planes[0];
+    s.planes = [arrival];
+    s.spawnAt = s.departureAt = Infinity;
+    s.clear(arrival, id);
+    for (let i = 0; i < 3000 && arrival.state === "approach"; i++) s.tick(0.1);
+    assert.equal(arrival.state, "rollout");
+    assert.ok(
+      arrival.x <= RUNWAYS[id].threshold - 200,
+      "Touchdown occurs inside the runway, beyond the threshold markings",
+    );
   }
 });
 
