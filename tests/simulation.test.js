@@ -412,6 +412,17 @@ test("continuous departures survive two hours across three traffic phases", () =
 test("airlines use their Heathrow terminals and taxi routes have no loops", () => {
   const s = new Simulation();
   s.spawnDeparture("27R"); // Include Singapore after the opening four departures.
+  const ready = s.planes.find((p) => p.state === "await-tower");
+  assert.ok(
+    Math.abs(
+      ready.heading -
+        Math.atan2(
+          ready.entryRoute[1].z - ready.z,
+          ready.entryRoute[1].x - ready.x,
+        ),
+    ) < 1e-8,
+    "The opening departure faces along its taxiway",
+  );
   const expected = { BA: "T5", VS: "T3", EK: "T3", SQ: "T2" };
   for (const p of s.planes.filter((p) => p.kind === "departure")) {
     assert.equal(p.terminal, expected[p.airline]);

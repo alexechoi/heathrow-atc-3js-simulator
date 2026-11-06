@@ -168,7 +168,10 @@ export class Simulation {
         z: hold[1],
         state: "await-tower",
         controller: "GROUND",
-        heading: Math.PI,
+        heading: Math.atan2(
+          ready.entryRoute[1].z - hold[1],
+          ready.entryRoute[1].x - hold[0],
+        ),
       });
       const path = taxi.taxiRoute;
       taxi.route = path.slice(Math.max(0, path.length - 18));
