@@ -10,8 +10,9 @@ export async function captureBrowser() {
       : undefined,
     args: [
       "--no-sandbox",
-      "--use-angle=swiftshader",
-      "--enable-unsafe-swiftshader",
+      ...(process.env.CAPTURE_NATIVE_GPU === "1"
+        ? []
+        : ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]),
     ],
   });
 }

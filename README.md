@@ -2,7 +2,7 @@
 
 **Two runways. One controller.** A playable, open-source Three.js air traffic control game inspired by Flight Control and [Piccadilly Line Driver](https://github.com/alexechoi/3js-tube-simulator).
 
-**[Play](https://heathrow-simulator.alexchoi.xyz/)** · **[Watch the camera reel](https://heathrow-simulator.alexchoi.xyz/?demo)**
+**[Play](https://heathrow-simulator.alexchoi.xyz/)** · **[Inspect the models](https://heathrow-simulator.alexchoi.xyz/models)** · **[Watch the camera reel](https://heathrow-simulator.alexchoi.xyz/?demo)**
 
 ![Heathrow Control](public/og.jpg)
 
@@ -45,6 +45,8 @@ The first arrival is aligned with 27L and makes a good first landing. Avoid clea
 | Golden hour button | Golden hour / daylight / blue hour |
 | 1× button | Cycle simulation speed |
 
+Your personal best is saved in this browser. **Copy result** on the shift report prepares a challenge link to share. Help pauses the simulation, the flythrough preserves your current shift, and switching away from the tab pauses an active shift until you resume. Graphics settings are in Help: desktop starts at **High detail**, and phone-sized screens start at **Smooth** to reduce graphics-memory use. Source texture dimensions and runway geometry are identical in both. Your explicit choice is remembered.
+
 The base game clock advances two simulated seconds per real second. Traffic, weather, callsigns, origins and destinations are fictional scenario data. The displayed clock is scenario UTC, not wall-clock time. Browser speech synthesis availability and voices vary by device.
 
 ## What's modelled
@@ -53,22 +55,22 @@ The base game clock advances two simulated seconds per real second. Traffic, wea
 - Terminal 5's western main building and satellite concourses, the central Terminal 2/3 area, southern Terminal 4 and an 87 m tower, aligned with real geographic coordinates.
 - Curved metal roofs, glass curtain walls, jet bridges, stands, ramp vehicles, parking structures, apron slabs and wear, taxiway centrelines, runway thresholds, touchdown markings, skid marks and approach lights.
 - Detailed FlightGear 787-9 exterior geometry with BA and Virgin liveries, a dedicated BA A320neo G-TTNR exterior with LEAP-1A engines, and separately dimensioned procedural studies for the A350-1000, A380-800 and 777-300ER. Curved fuselages and cockpit glazing, cambered wings, recessed engine fans, multi-axle landing gear, navigation lights and photo-referenced BA, Virgin, Emirates and Singapore paint with actual airline wordmarks. The 787 and A320neo use dedicated exterior models; the A350, A380 and 777 remain procedural studies rather than manufacturer-exact models.
-- 764 mapped airfield features and 2,787 OpenStreetMap building footprints; mapped woodland, real satellite surroundings, and a shared local Web Mercator coordinate frame. Building heights use OSM where available and estimates elsewhere. It is not a surveyed digital twin.
+- 764 mapped airfield features and 2,819 OpenStreetMap building footprints, including Terminal 3's grouped concourse outline and courtyard; mapped woodland, real satellite surroundings, and a shared local Web Mercator coordinate frame. Building heights use OSM where available and estimates elsewhere. It is not a surveyed digital twin.
 - Bundled CC0 photographic skies and asphalt/concrete/grass PBR textures; world-space material blending, roughness and normal maps, reflective glazing with procedural interior detail, brushed roof seams, HDR bloom, colour grading, MSAA, directional shadows and three lighting moods.
-- Departures use a connected graph of 417 OSM taxiway ways and 16 reserved stand lead-ins. Ground aircraft queue behind other traffic and stop before runway entry. The ground → tower → departure sequence is simplified for one player; there are no live radio frequencies.
+- Departures use a connected graph of 417 OSM taxiway ways and 24 reserved stand lead-ins across T2, T3 and T5. BA departures use T5, Virgin/Emirates use T3, and Singapore uses T2. Ground aircraft queue behind other traffic and stop before runway entry. Opposing taxi routes are held on stand until clear, and mapped feeder routes give each runway queue a consistent entry. The ground → tower → departure sequence is simplified for one player; there are no live radio frequencies.
 - Bovingdon, Lambourne, Biggin and Ockham-inspired external holding stacks, with racetrack movement and reserved levels starting at a scenario altitude of 6,000 ft, separated by 1,000 ft. Joining flights reserve their target levels; cleared flights retain physical separation while leaving the stack. Radar labels spread apart around busy stacks and stay clear of the desktop controls. Their positions, dimensions and altitudes are geographically compressed for the game and are not navigation fixes.
 - Soft animated shader fire and wind-drifting smoke replace solid explosion meshes.
 - Five camera sequences: airport reveal, arrival chase, Terminal 5 flyby, tower view and closing orbit.
 
-This is a visual game, **not a flight dynamics or operational ATC trainer**. It does not implement real approach procedures, wake categories, real traffic, airline-specific stand allocation or a full ground-control system. Heathrow, NATS and the airlines do not endorse this project.
+This is a visual game, **not a flight dynamics or operational ATC trainer**. It does not implement real approach procedures, wake categories, real traffic, aircraft-specific stand restrictions or a full ground-control system. Heathrow, NATS and the airlines do not endorse this project.
 
 ## Inspect the models locally
 
-Open **`/models.html`** on the local dev server, or use the **Models** link in the simulator. The hangar includes BA/Virgin 787s, a BA A320neo, the remaining aircraft studies, and T5A/B/C and T2A/B. Orbit, zoom, switch between perspective/side/front/plan views, or toggle wireframe. Each entry identifies its modelling source and limitations.
+Open **`/models.html`** on the local dev server, or use the **Models** link in the simulator. The hangar includes BA/Virgin 787s, a BA A320neo, the remaining aircraft studies, T5A/B/C, T2A/B and the mapped T3 complex. Orbit, zoom, switch between perspective/side/front/plan views, or toggle wireframe. Each entry identifies its modelling source and limitations.
 
 Aircraft revisions include per-type swept wing sections, flush spoiler/flap panel textures, corrected cockpit placement, wider landing-gear tracks and the A380’s four main bogies plus nose gear (22 wheels).
 
-[Watch the current aircraft model review](docs/media/aircraft-model-review.mp4) or see [the model screenshots and photo references](docs/references.md#a320neo-replacement-and-widebody-geometry-review--5-november-2026). These local model updates have not been deployed.
+[Watch the current aircraft model review](docs/media/aircraft-model-review.mp4) or see [the model screenshots and photo references](docs/references.md#a320neo-replacement-and-widebody-geometry-review--5-november-2026). These models are included in the live release.
 
 Terminal revisions include T2B's mapped 35 m core (the previous 66 m core was too wide), articulated telescopic jet bridges and supports, paired bridge arms, T5 roof trusses, transverse rooflights and separate service levels.
 
@@ -77,6 +79,8 @@ Terminal revisions include T2B's mapped 35 m core (the previous 66 m core was to
 ```sh
 npm test                        # deterministic simulation tests
 node scripts/e2e.mjs            # Chromium desktop + mobile interaction checks
+node scripts/release-e2e.mjs    # shift preservation, focus, phone layout and score sharing
+node scripts/startup-e2e.mjs    # blocked assets, missing imagery and graphics recovery
 node scripts/traffic-e2e.mjs    # airline logos, departures, collisions and restart
 node scripts/operations-e2e.mjs # gate-to-tower flow, mapped taxi, drawn vectors and external holds
 node scripts/touch-route-e2e.mjs # actual mobile touch input assigns a route
@@ -85,12 +89,19 @@ node scripts/models-e2e.mjs     # model geometry, gallery, viewpoints and mobile
 node scripts/aircraft-integration-e2e.mjs # A320neo traffic model and gear visibility
 node scripts/capture-models.mjs # 12-second local aircraft model-review MP4
 # In another terminal: npm run preview -- --port 4173
-npm run capture                 # 1280×720 / 24 fps / 30-second H.264 MP4
+npm run capture                 # original 30-second camera reel
+node scripts/capture-launch.mjs # current 20-second launch film + social image
 ```
 
-Browser scripts use `/usr/bin/chromium` by default. Set `CHROMIUM_PATH` to your Chromium executable, `TEST_URL` for browser tests, or `CAPTURE_URL` / `CAPTURE_OUT` for recording. The recorder advances the simulation by explicit frame times, so a slow capture machine does not produce a choppy output video. FFmpeg must be on PATH. Temporary screenshots go into ignored `work/screenshots/`.
+Browser scripts use `/usr/bin/chromium` by default. Set `CHROMIUM_PATH` to your Chromium executable, `TEST_URL` for browser tests, or `CAPTURE_URL` / `CAPTURE_OUT` for recording. Software WebGL is the default for reproducibility in cloud workers; set `CAPTURE_NATIVE_GPU=1` to use an available hardware GPU. The recorder advances the simulation by explicit frame times, so a slow capture machine does not produce a choppy output video. FFmpeg must be on PATH. Temporary screenshots go into ignored `work/screenshots/`.
 
-The in-browser reel includes a blue-hour tower sequence and is 42 seconds; the exported video plays the same five shots at 1.4× pace. The MP4 is intentionally silent. `?demo` starts the reel; `?play` starts a shift; `?capture` freezes wall-clock animation for capture automation.
+The in-browser reel includes a blue-hour tower sequence and lasts 42 seconds. The original `npm run capture` export plays those five shots in 30 seconds; the current launch film is a separate 20-second edit with departure and arrival gameplay. Both exports are silent. `?demo` starts the reel; `?play` starts a shift; `?capture` freezes wall-clock animation for capture automation.
+
+## Launch
+
+The [X launch kit](docs/launch.md) contains post copy, current screenshots, a gameplay/flythrough export and repeatable checks. The reviewed app is published at the play URL. Deployments are batched into reviewed milestones.
+
+Aircraft transport assets are compressed from 26.7 MB to 7.5 MB without reducing mesh topology or 2K texture dimensions. Surface textures retain their dimensions, with smaller WebP alternatives. Browser resource timing reported about 14 MB transferred in a desktop capture, versus about 42 MB before this pass; third-party imagery can add traffic not exposed by Resource Timing. Asset versions derive from model contents so returning browsers fetch updates.
 
 ## Source layout
 
@@ -105,7 +116,7 @@ The in-browser reel includes a blue-hour tower sequence and is 42 seconds; the e
 - `src/main.js` — renderer, interaction, cameras, radio and UI.
 - `tests/` and `scripts/` — repeatable tests and recording.
 - `docs/references.md` — photographic references and visual review notes.
-- `netlify.toml` — static build and caching configuration.
+- `netlify.toml` / `public/_headers` — static build and caching configuration.
 
 ## Deploy
 
@@ -113,4 +124,4 @@ Connect this repository to Netlify, use `npm run build`, and publish `dist`. Att
 
 ## Licence and credits
 
-Original code and procedural art: [Apache-2.0](LICENSE). Third-party assets keep their original licences; see [CREDITS.md](CREDITS.md). Inspiration is credited without copying the tube simulator's code or assets. [Slop New York](https://github.com/mrdoob/slop-newyork/) informed the layered material and lighting approach; this project uses its own WebGL2 shaders for broad browser support. Contributions welcome.
+Original code and procedural art: [Apache-2.0](LICENSE). Third-party assets keep their original licences; see [CREDITS.md](CREDITS.md). Inspiration is credited without copying the tube simulator's code or assets. [Slop New York](https://github.com/mrdoob/slop-newyork/) informed the layered material and lighting approach; this project uses its own WebGL2 shaders for broad browser support. Contributions welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -32,7 +32,7 @@ The following original 1K JPG diffuse, OpenGL normal and roughness maps are bund
 
 ## Geographic data and imagery
 
-- `public/data/heathrow.json` and `public/data/heathrow-ground.json`: derived from **© OpenStreetMap contributors**, **ODbL 1.0**. <https://www.openstreetmap.org/copyright>. Contains selected Heathrow building footprints, airfield ways, roads and woodland, transformed into local coordinates and simplified for rendering. The derived database is offered under ODbL; original application code remains Apache-2.0. Source way IDs are retained. Data retrieved 30 October 2026.
+- `public/data/heathrow.json` and `public/data/heathrow-ground.json`: derived from **© OpenStreetMap contributors**, **ODbL 1.0**. <https://www.openstreetmap.org/copyright>. Contains selected Heathrow building footprints, airfield ways, roads and woodland, transformed into local coordinates and simplified for rendering. The derived database is offered under ODbL; original application code remains Apache-2.0. Source way and relation IDs are retained. Data retrieved 30 October 2026.
 - **Esri World Imagery**, streamed at runtime: **Esri, Vantor, Earthstar Geographics, and the GIS User Community**. <https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer>. Satellite imagery is not bundled or relicensed as open-source art. Provider terms apply. Attribution remains visible in the app and exported footage. Imagery may be historical and is not a live airport feed.
 - [Slop New York](https://github.com/mrdoob/slop-newyork/), mrdoob and contributors: reference for layered procedural materials, HDR grading, bloom and geographic scene construction. No source code was copied into this project's original shaders.
 

@@ -1,0 +1,19 @@
+1
+00:00:00,000 --> 00:00:03,999
+Can you run Heathrow?
+A Three.js air traffic control game.
+
+2
+00:00:04,000 --> 00:00:09,999
+Ground → tower → takeoff.
+Your clearance. Your runway.
+
+3
+00:00:10,000 --> 00:00:15,999
+Keep the arrivals separated.
+Continuous traffic. Mistakes end your shift.
+
+4
+00:00:16,000 --> 00:00:20,000
+Two runways. One controller.
+Play heathrow-simulator.alexchoi.xyz
