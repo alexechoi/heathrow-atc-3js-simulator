@@ -11,7 +11,9 @@ function recover(message) {
   loading.classList.add("load-failed");
   loading.querySelector("h2").textContent = "The tower couldn’t open.";
   detail.textContent = message;
-  progress.textContent = window.__HEATHROW__?.ready ? "Reload to open a fresh shift." : "Your browser has not started a shift.";
+  progress.textContent = window.__HEATHROW__?.ready
+    ? "Reload to open a fresh shift."
+    : "Your browser has not started a shift.";
   document.querySelector("#load-retry").hidden = false;
   document.querySelector("#load-retry").focus();
 }

@@ -28,6 +28,24 @@ for runway,target in holds.items():
    nd=d+cost
    if nd<distance.get(v,1e20):distance[v]=nd;prev[v]=u;heapq.heappush(queue,(nd,v))
  paths[runway]=(distance,prev)
+# Use one mapped feeder per hold. Independent shortest paths otherwise merge
+# from both sides of A1's tight junction and can put queued widebodies nose-on.
+feeder_tails={}
+for runway,reference in {'27R':(1947.3,-558.0),'27L':(1821.3,560.3)}.items():
+ feeder=min(keys,key=lambda point:math.dist(point,reference))
+ tail=[list(feeder)];u=feeder;hold_prev=paths[runway][1]
+ while u in hold_prev:u=hold_prev[u];tail.append(list(u))
+ feeder_tails[runway]=tail
+ forbidden={frozenset((tuple(a),tuple(b))) for a,b in zip(tail,tail[1:])}
+ distance={feeder:0};prev={};queue=[(0,feeder)]
+ while queue:
+  d,u=heapq.heappop(queue)
+  if d!=distance[u]:continue
+  for v,cost in adj[u].items():
+   if frozenset((u,v)) in forbidden:continue
+   nd=d+cost
+   if nd<distance.get(v,1e20):distance[v]=nd;prev[v]=u;heapq.heappush(queue,(nd,v))
+ paths[runway]=(distance,prev)
 gates=[]
 for w in ways:
  if w['kind']!='parking_position' or len(w['points'])<2 or not w.get('ref'):continue
@@ -43,15 +61,21 @@ for w in ways:
  for r,(distance,prev) in paths.items():
   route=[list(nearest)];u=nearest
   while u in prev:u=prev[u];route.append(list(u))
+  route.extend(feeder_tails[r][1:])
+  assert len({tuple(point) for point in route})==len(route),('loop',w['ref'],r)
   routes[r]=route
  gates.append({'stand':w['ref'],'wayId':w['id'],'position':start,'heading':math.atan2(dz,dx),'pushback':[start]+list(reversed(w['points'][:-1])),'routes':routes})
-# Spread usable stands across concourses, with room for widebody wings.
+# Reserve mapped stands in each operator's Heathrow terminal, with enough
+# spacing for widebody wings. Avoid putting every airline into Terminal 2.
 chosen=[]
-for gate in sorted(gates,key=lambda g:abs(g['position'][0]-1000)):
- if any(math.dist(gate['position'],p['position'])<115 for p in chosen):continue
- chosen.append(gate)
- if len(chosen)==16:break
-assert len(chosen)>=8,len(chosen)
+for terminal in ['5','3','2']:
+ count=0
+ for gate in sorted((g for g in gates if g['stand'].startswith(terminal)),key=lambda g:g['stand']):
+  if any(math.dist(gate['position'],p['position'])<115 for p in chosen):continue
+  gate['terminal']='T'+terminal
+  chosen.append(gate);count+=1
+  if count==8:break
+ assert count>=4,(terminal,count)
 out={'attribution':'Derived from © OpenStreetMap contributors, ODbL 1.0','holds':{r:{'name':'A1' if r=='27R' else 'N1','position':list(p),'entry':entries[r]} for r,p in holds.items()},'gates':chosen}
 pathlib.Path('public/data/heathrow-ground.json').write_text(json.dumps(out,separators=(',',':')))
 print({'taxiNodes':len(nodes),'connectedStands':len(gates),'reservedDepartureStands':[(g['stand'],g['position']) for g in chosen]})

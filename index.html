@@ -17,7 +17,7 @@
     <meta property="og:type" content="website" />
     <meta
       property="og:image"
-      content="https://heathrow-simulator.alexchoi.xyz/og.jpg"
+      content="https://heathrow-simulator.alexchoi.xyz/og.jpg?v=20261106"
     />
     <meta name="twitter:card" content="summary_large_image" />
     <meta
@@ -40,7 +40,7 @@
     />
     <meta
       name="twitter:image"
-      content="https://heathrow-simulator.alexchoi.xyz/og.jpg"
+      content="https://heathrow-simulator.alexchoi.xyz/og.jpg?v=20261106"
     />
     <link rel="canonical" href="https://heathrow-simulator.alexchoi.xyz/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -256,7 +256,12 @@
           <button id="retry-shift" class="primary">Try another shift</button>
           <button id="copy-result" class="secondary">Copy result</button>
         </div>
-        <textarea id="result-copy" aria-label="Your result to copy" readonly hidden></textarea>
+        <textarea
+          id="result-copy"
+          aria-label="Your result to copy"
+          readonly
+          hidden
+        ></textarea>
       </section>
       <footer>
         <div class="location">
@@ -338,6 +343,13 @@
       <p>
         <a href="/models.html">Inspect the aircraft and terminal models →</a>
       </p>
+      <label class="graphics-setting" for="graphics-quality">
+        <span>Graphics <small>Choose Smooth on slower devices.</small></span>
+        <select id="graphics-quality">
+          <option value="high">High detail</option>
+          <option value="smooth">Smooth</option>
+        </select>
+      </label>
       <div class="help-keys">
         1–4 cameras · Space pause · H hide HUD · F flythrough · M sound · Esc
         exit

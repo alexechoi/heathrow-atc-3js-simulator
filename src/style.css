@@ -396,7 +396,7 @@ button:disabled {
 }
 .intro h2 {
   font:
-    500 clamp(40px, 4.5vw, 68px)/1.02 "Space Grotesk Variable",
+    500 clamp(40px, 4.5vw, 68px) / 1.02 "Space Grotesk Variable",
     sans-serif;
   letter-spacing: -3px;
   margin: 17px 0 20px;
@@ -1364,6 +1364,50 @@ body.drawing #world {
   }
 }
 
-.result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-#result-copy { width: 100%; min-height: 100px; margin-top: 12px; padding: 10px; color: var(--mint); background: #102025; border: 1px solid #6a8b7c; font: inherit; font-size: 12px; line-height: 1.5; }
-#result-copy[hidden] { display: none; }
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#result-copy {
+  width: 100%;
+  min-height: 100px;
+  margin-top: 12px;
+  padding: 10px;
+  color: var(--mint);
+  background: #102025;
+  border: 1px solid #6a8b7c;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+}
+#result-copy[hidden] {
+  display: none;
+}
+
+.graphics-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid #d1efdb22;
+}
+.graphics-setting small {
+  display: block;
+  margin-top: 6px;
+  color: #a4b9af;
+  font-size: 11px;
+}
+.graphics-setting select {
+  color: #e4f5e9;
+  background: #243b3d;
+  border: 1px solid #789387;
+  border-radius: 4px;
+  padding: 10px;
+  font: inherit;
+}
+
+body:not(.playing) #labels {
+  display: none;
+}

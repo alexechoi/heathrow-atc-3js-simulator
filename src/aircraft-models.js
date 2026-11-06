@@ -39,9 +39,13 @@ export async function loadAircraftModels() {
               o.name,
             ) && !/bay/i.test(o.name)
               ? "gear"
-              : /beaconlenz|navlite|strobe/i.test(o.name)
-                ? "nav"
-                : "airframe";
+              : /beacon/i.test(o.name)
+                ? "beacon"
+                : /strobe/i.test(o.name)
+                  ? "strobe"
+                  : /navlite/i.test(o.name)
+                    ? "nav"
+                    : "airframe";
           const key = part + ":" + o.material.uuid;
           if (!groups.has(key))
             groups.set(key, { part, material: o.material, geometries: [] });
@@ -91,11 +95,17 @@ export async function loadAircraftModels() {
         const nav = new T.Group();
         nav.name = "nav";
         root.add(nav);
+        const beacon = new T.Group(),
+          strobe = new T.Group();
+        beacon.name = "beacon";
+        strobe.name = "strobe";
+        root.add(beacon, strobe);
+        const parts = { gear, nav, beacon, strobe };
         for (const { part, material, geometries } of groups.values()) {
           const mesh = new T.Mesh(mergeGeometries(geometries), material);
           mesh.castShadow = true;
           mesh.receiveShadow = true;
-          (part === "gear" ? gear : part === "nav" ? nav : root).add(mesh);
+          (parts[part] || root).add(mesh);
           geometries.forEach((g) => g.dispose());
         }
         models.set(type + airline + (parked ? "-parked" : ""), root);

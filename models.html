@@ -31,7 +31,9 @@
       </div>
     </aside>
     <main id="model-stage">
-      <div id="model-loading">Opening the hangar…</div>
+      <div id="model-loading" role="status" aria-live="polite">
+        Opening the hangar…
+      </div>
       <canvas
         id="model-world"
         aria-label="Orbitable aircraft and terminal model"
@@ -49,6 +51,6 @@
       </div>
       <div id="model-credit"></div>
     </main>
-    <script type="module" src="/src/model-viewer.js"></script>
+    <script type="module" src="/src/model-boot.js"></script>
   </body>
 </html>

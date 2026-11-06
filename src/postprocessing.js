@@ -40,6 +40,15 @@ export function createPostProcessing(renderer, scene, camera) {
     render() {
       composer.render();
     },
+    quality(mode) {
+      bloom.enabled = mode !== "smooth";
+      const samples = mode === "smooth" ? 2 : 4;
+      for (const buffer of [composer.renderTarget1, composer.renderTarget2]) {
+        buffer.samples = samples;
+        buffer.dispose();
+      }
+      composer.setPixelRatio(renderer.getPixelRatio());
+    },
     resize(w, h) {
       composer.setSize(w, h);
     },

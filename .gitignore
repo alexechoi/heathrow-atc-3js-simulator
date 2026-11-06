@@ -6,3 +6,6 @@ work/
 
 # Generated flythrough export; rebuild with npm run capture.
 public/media/*.mp4
+
+__pycache__/
+*.pyc

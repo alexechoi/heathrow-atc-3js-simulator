@@ -235,3 +235,33 @@ h1 {
     padding-bottom: 5px;
   }
 }
+
+#model-loading[hidden] {
+  display: none;
+}
+#model-loading.model-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  text-align: center;
+  gap: 12px;
+}
+.model-error h2 {
+  margin: 0;
+  font:
+    500 28px "Space Grotesk Variable",
+    sans-serif;
+}
+.model-error p {
+  max-width: 350px;
+  line-height: 1.7;
+}
+.model-error button {
+  padding: 12px 24px;
+  border: 0;
+  border-radius: 4px;
+  color: #142226;
+  background: #c9edcc;
+}

@@ -366,7 +366,7 @@ select(
     ? location.hash.slice(1)
     : "BA-B789",
 );
-$("#model-loading").remove();
+$("#model-loading").hidden = true;
 window.__MODELS__ = {
   ready: true,
   select,

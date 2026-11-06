@@ -1,66 +1,174 @@
-import assert from 'node:assert/strict';
-import fs from 'node:fs/promises';
-import {captureBrowser,captureContext,settleFrame} from './browser.mjs';
-const browser=await captureBrowser();
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import { captureBrowser, captureContext, settleFrame } from "./browser.mjs";
+const browser = await captureBrowser();
 try {
- const page=await browser.newPage({...captureContext,viewport:{width:1440,height:900}});
- page.setDefaultTimeout(120000);
- const errors=[];page.on('pageerror',e=>errors.push(e.message));
- const url=process.env.TEST_URL||'http://localhost:4173/';
- await page.goto(url+'?capture',{waitUntil:'domcontentloaded'});
- await page.waitForFunction(()=>window.__HEATHROW__?.ready);
- await fs.mkdir('work/screenshots',{recursive:true});
- await settleFrame(page);
- await page.screenshot({path:'work/screenshots/release-desktop.png'});
- const transfer=await page.evaluate(()=>performance.getEntriesByType('resource').reduce((s,r)=>s+r.transferSize,0));
- console.log('Desktop captured');
- await page.click('#start');await page.click('[data-runway="27L"]');
- await page.evaluate(()=>__HEATHROW__.step(.4));
- const shift=await page.evaluate(()=>JSON.stringify(__HEATHROW__.sim));
- await page.click('#help');
- assert.equal(await page.evaluate(()=>__HEATHROW__.state.paused),true);
- await page.locator('#help-dialog').evaluate(el=>{el.tabIndex=-1;el.focus()});
- await page.keyboard.press('f');await page.keyboard.press('Space');
- assert.equal(await page.evaluate(()=>__HEATHROW__.state.cinematic),false);
- await page.click('#help-play');
- await page.waitForFunction(()=>!__HEATHROW__.state.paused);
- assert.equal(await page.evaluate(()=>JSON.stringify(__HEATHROW__.sim)),shift,'Help must preserve the active shift');
- console.log('Help passed');
- await page.locator('[data-flight]').first().focus();
- await page.evaluate(()=>{window.__focusedRow=document.activeElement;__HEATHROW__.step(.4)});
- assert.ok(await page.evaluate(()=>document.activeElement===window.__focusedRow),'Traffic refresh preserves keyboard focus');
- await page.click('#pause');
- const saved=await page.evaluate(()=>({sim:JSON.stringify(__HEATHROW__.sim),state:__HEATHROW__.state}));
- await page.keyboard.press('f');await page.evaluate(()=>__HEATHROW__.captureFrame(12));
- await page.keyboard.press('Escape');
- const restored=await page.evaluate(()=>({sim:JSON.stringify(__HEATHROW__.sim),state:__HEATHROW__.state}));
- assert.equal(restored.sim,saved.sim,'Flythrough must restore exact simulation state');
- for(const k of ['paused','view','day','selectedId','playing'])assert.equal(restored.state[k],saved.state[k],k);
- await page.click('#pause');
- await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;});
- assert.equal(await page.evaluate(()=>__HEATHROW__.state.paused),true,'Background tab pauses the shift');
- console.log('Film, focus and background pause passed');
- await page.setViewportSize({width:390,height:844});
- await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__HEATHROW__?.ready);
- await settleFrame(page);await page.screenshot({path:'work/screenshots/release-mobile.png'});
- assert.equal(await page.locator('.traffic').isVisible(),false,'Phone intro has no overlapping board');
- assert.ok(await page.locator('#start').isVisible());
- assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal overflow');
- await page.click('#start');await page.click('#departure-tab');await page.evaluate(()=>__HEATHROW__.step(.4));
- await settleFrame(page);await page.screenshot({path:'work/screenshots/release-mobile-playing.png'});
- assert.ok(await page.locator('.traffic').isVisible());
- assert.ok(await page.locator('#ground-action').isVisible());
- await page.evaluate(()=>{
-   const a=__HEATHROW__;a.sim.score=300;a.sim.landed=2;a.sim.departed=1;a.step(.4);
-   a.sim.over=true;a.sim.reason='Three strikes.';a.step(.4);
-   Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async(text)=>{window.__copiedResult=text;}}});
- });
- await page.click('#copy-result');
- assert.match(await page.evaluate(()=>window.__copiedResult),/2 arrivals and 1 departure/);
- assert.match(await page.locator('#best-result').textContent(),/300 points/);
- await page.click('#retry-shift');
- assert.equal(await page.evaluate(()=>__HEATHROW__.sim.over),false);
- assert.equal(await page.evaluate(()=>localStorage.getItem('heathrow-control-best')),'300');
- assert.deepEqual(errors,[]);
- console.log(JSON.stringify({helpPreservesShift:true,filmPreservesShift:true,keyboardFocus:true,backgroundPause:true,mobile:true,transfer,errors}));
-} finally {await browser.close();}
+  const page = await browser.newPage({
+    ...captureContext,
+    viewport: { width: 1440, height: 900 },
+  });
+  page.setDefaultTimeout(120000);
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  const url = process.env.TEST_URL || "http://localhost:4173/";
+  await page.goto(url + "?capture", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => window.__HEATHROW__?.ready);
+  await fs.mkdir("work/screenshots", { recursive: true });
+  await settleFrame(page);
+  await page.screenshot({ path: "work/screenshots/release-desktop.png" });
+  const transfer = await page.evaluate(() =>
+    performance
+      .getEntriesByType("resource")
+      .reduce((s, r) => s + r.transferSize, 0),
+  );
+  console.log("Desktop captured");
+  await page.click("#start");
+  await page.click('[data-runway="27L"]');
+  await page.evaluate(() => __HEATHROW__.step(0.4));
+  const shift = await page.evaluate(() => JSON.stringify(__HEATHROW__.sim));
+  await page.click("#help");
+  assert.equal(await page.evaluate(() => __HEATHROW__.state.paused), true);
+  await page.locator("#help-dialog").evaluate((el) => {
+    el.tabIndex = -1;
+    el.focus();
+  });
+  await page.keyboard.press("f");
+  await page.keyboard.press("Space");
+  assert.equal(await page.evaluate(() => __HEATHROW__.state.cinematic), false);
+  await page.selectOption("#graphics-quality", "smooth");
+  await page.evaluate(() => __HEATHROW__.step(0));
+  assert.ok(
+    await page.evaluate(() => __HEATHROW__.renderer.getPixelRatio() <= 1.25),
+  );
+  assert.equal(
+    await page.evaluate(() => __HEATHROW__.post.composer.passes[1].enabled),
+    false,
+  );
+  await page.selectOption("#graphics-quality", "high");
+  await page.evaluate(() => __HEATHROW__.step(0));
+  assert.equal(
+    await page.evaluate(() => __HEATHROW__.post.composer.passes[1].enabled),
+    true,
+  );
+  await page.click("#help-play");
+  await page.waitForFunction(() => !__HEATHROW__.state.paused);
+  assert.equal(
+    await page.evaluate(() => JSON.stringify(__HEATHROW__.sim)),
+    shift,
+    "Help must preserve the active shift",
+  );
+  console.log("Help passed");
+  await page.locator("[data-flight]").first().focus();
+  await page.evaluate(() => {
+    window.__focusedRow = document.activeElement;
+    __HEATHROW__.step(0.4);
+  });
+  assert.ok(
+    await page.evaluate(() => document.activeElement === window.__focusedRow),
+    "Traffic refresh preserves keyboard focus",
+  );
+  await page.click("#pause");
+  const saved = await page.evaluate(() => ({
+    sim: JSON.stringify(__HEATHROW__.sim),
+    state: __HEATHROW__.state,
+  }));
+  await page.keyboard.press("f");
+  await page.evaluate(() => __HEATHROW__.captureFrame(12));
+  await page.keyboard.press("Escape");
+  const restored = await page.evaluate(() => ({
+    sim: JSON.stringify(__HEATHROW__.sim),
+    state: __HEATHROW__.state,
+  }));
+  assert.equal(
+    restored.sim,
+    saved.sim,
+    "Flythrough must restore exact simulation state",
+  );
+  for (const k of ["paused", "view", "day", "selectedId", "playing"])
+    assert.equal(restored.state[k], saved.state[k], k);
+  await page.click("#pause");
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      value: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+    delete document.hidden;
+  });
+  assert.equal(
+    await page.evaluate(() => __HEATHROW__.state.paused),
+    true,
+    "Background tab pauses the shift",
+  );
+  console.log("Film, focus and background pause passed");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => window.__HEATHROW__?.ready);
+  await settleFrame(page);
+  await page.screenshot({ path: "work/screenshots/release-mobile.png" });
+  assert.equal(
+    await page.locator(".traffic").isVisible(),
+    false,
+    "Phone intro has no overlapping board",
+  );
+  assert.ok(await page.locator("#start").isVisible());
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+    "No horizontal overflow",
+  );
+  await page.click("#start");
+  await page.click("#departure-tab");
+  await page.evaluate(() => __HEATHROW__.step(0.4));
+  await settleFrame(page);
+  await page.screenshot({
+    path: "work/screenshots/release-mobile-playing.png",
+  });
+  assert.ok(await page.locator(".traffic").isVisible());
+  assert.ok(await page.locator("#ground-action").isVisible());
+  await page.evaluate(() => {
+    const a = __HEATHROW__;
+    a.sim.score = 300;
+    a.sim.landed = 2;
+    a.sim.departed = 1;
+    a.step(0.4);
+    a.sim.over = true;
+    a.sim.reason = "Three strikes.";
+    a.step(0.4);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text) => {
+          window.__copiedResult = text;
+        },
+      },
+    });
+  });
+  await page.click("#copy-result");
+  assert.match(
+    await page.evaluate(() => window.__copiedResult),
+    /2 arrivals and 1 departure/,
+  );
+  assert.match(await page.locator("#best-result").textContent(), /300 points/);
+  await page.click("#retry-shift");
+  assert.equal(await page.evaluate(() => __HEATHROW__.sim.over), false);
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem("heathrow-control-best")),
+    "300",
+  );
+  assert.deepEqual(errors, []);
+  console.log(
+    JSON.stringify({
+      helpPreservesShift: true,
+      filmPreservesShift: true,
+      keyboardFocus: true,
+      backgroundPause: true,
+      mobile: true,
+      transfer,
+      errors,
+    }),
+  );
+} finally {
+  await browser.close();
+}

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   Simulation,
+  GROUND_LAYOUT,
   separationConflict,
   approachPoints,
 } from "../src/simulation.js";
@@ -375,31 +376,64 @@ test("aircraft travelling to a hold reserve a level and repeated hold instructio
   );
 });
 
-test("continuous departures complete thirty minutes of ground/tower/departure handovers without deadlock", () => {
-  const s = new Simulation();
-  s.planes = s.planes.filter((p) => p.kind === "departure");
-  s.spawnAt = Infinity;
-  for (let i = 0; i < 18000 && !s.over; i++) {
-    for (const p of s.planes) {
-      if (p.state === "at-gate") s.pushback(p);
-      if (p.state === "await-taxi") s.taxi(p);
-      if (
-        p.state === "await-tower" ||
-        (p.state === "departure" && p.y >= 250 && !p.handedOff)
-      )
-        s.handoff(p);
-      if (p.state === "holding-short" && !s.runwayTraffic(p.runway, p).length)
-        s.clear(p, p.runway);
+test("continuous departures survive two hours across three traffic phases", () => {
+  // Longer T5 routes and T3 pushback merges must remain live after the first
+  // departures. This catches queues that used to deadlock after 30 minutes.
+  for (const offset of [0, 3, 7]) {
+    const s = new Simulation();
+    s.planes = s.planes.filter((p) => p.kind === "departure");
+    s.spawnAt = Infinity;
+    s.serial += offset;
+    for (let i = 0; i < 72000 && !s.over; i++) {
+      for (const p of s.planes) {
+        if (p.state === "at-gate") s.pushback(p);
+        if (p.state === "await-taxi") s.taxi(p);
+        if (
+          p.state === "await-tower" ||
+          (p.state === "departure" && p.y >= 250 && !p.handedOff)
+        )
+          s.handoff(p);
+        if (p.state === "holding-short" && !s.runwayTraffic(p.runway, p).length)
+          s.clear(p, p.runway);
+      }
+      s.tick(0.1);
     }
-    s.tick(0.1);
+    assert.equal(s.over, false, s.reason);
+    assert.equal(s.strikes, 0);
+    assert.ok(s.departed >= 90, `Phase ${offset}: ${s.departed} departures`);
+    assert.ok(
+      s.planes.some((p) =>
+        ["at-gate", "pushback", "taxiing"].includes(p.state),
+      ),
+    );
   }
-  assert.equal(s.over, false);
-  assert.equal(s.strikes, 0);
-  assert.ok(s.departed >= 25, `Throughput: ${s.departed} departures`);
-  assert.ok(
-    s.planes.some((p) => ["at-gate", "pushback", "taxiing"].includes(p.state)),
-    "new ground traffic is still being supplied",
-  );
+});
+
+test("airlines use their Heathrow terminals and taxi routes have no loops", () => {
+  const s = new Simulation();
+  s.spawnDeparture("27R"); // Include Singapore after the opening four departures.
+  const expected = { BA: "T5", VS: "T3", EK: "T3", SQ: "T2" };
+  for (const p of s.planes.filter((p) => p.kind === "departure")) {
+    assert.equal(p.terminal, expected[p.airline]);
+    assert.equal(p.stand[0], p.terminal[1]);
+  }
+  for (const terminal of ["T2", "T3", "T5"])
+    assert.ok(
+      GROUND_LAYOUT.gates.filter((g) => g.terminal === terminal).length >= 8,
+    );
+  for (const gate of GROUND_LAYOUT.gates)
+    for (const [runway, route] of Object.entries(gate.routes)) {
+      assert.equal(
+        new Set(route.map((p) => p.join(","))).size,
+        route.length,
+        `${gate.stand}: no taxi loop`,
+      );
+      assert.deepEqual(route.at(-1), GROUND_LAYOUT.holds[runway].position);
+      assert.ok(
+        route.every((p) => p[1] >= -652 && p[1] <= 645),
+        "Taxi clearance never crosses an active runway",
+      );
+    }
 });
 
 test("rejoining a hold at exactly 7,000 ft preserves the available level", () => {

@@ -124,6 +124,25 @@ const [, , , geography] = await Promise.all([
 $("#loading-detail").textContent = "Opening the tower…";
 const airport = buildGeographicAirport(scene, geography);
 const post = createPostProcessing(renderer, scene, camera);
+function setGraphics(mode) {
+  const smooth = mode === "smooth";
+  renderer.setPixelRatio(Math.min(devicePixelRatio, smooth ? 1.25 : 1.75));
+  renderer.setSize(innerWidth, innerHeight);
+  sun.shadow.mapSize.setScalar(smooth ? 2048 : 4096);
+  sun.shadow.map?.dispose();
+  sun.shadow.map = null;
+  sun.shadow.needsUpdate = true;
+  post.quality(mode);
+  $("#graphics-quality").value = smooth ? "smooth" : "high";
+  try {
+    localStorage.setItem("heathrow-graphics", smooth ? "smooth" : "high");
+  } catch {}
+}
+$("#graphics-quality").onchange = (event) => setGraphics(event.target.value);
+try {
+  if (localStorage.getItem("heathrow-graphics") === "smooth")
+    setGraphics("smooth");
+} catch {}
 document.querySelector("#imagery-credit").textContent = IMAGERY_CREDIT;
 document.querySelector("#imagery-credit").title = geography.near
   ? "Live Esri satellite imagery, aligned to mapped Heathrow geometry."
@@ -406,8 +425,14 @@ function enterFilm() {
   // reset() replaces simulation collections; retain the original objects so
   // routes, Sets and THREE.Vector3 trails survive the preview unchanged.
   savedShift = {
-    simulation: { ...sim }, selectedId, trafficFilter, view, paused, day,
-    position: camera.position.clone(), target: controls.target.clone(),
+    simulation: { ...sim },
+    selectedId,
+    trafficFilter,
+    view,
+    paused,
+    day,
+    position: camera.position.clone(),
+    target: controls.target.clone(),
     clean: document.body.classList.contains("clean"),
   };
   cinematic = true;
@@ -495,10 +520,19 @@ function cinema(t) {
 function updateModels(dt) {
   const active = new Set();
   const radarLabels = [];
-  const mobileLabelBounds = innerWidth < 800 && playing ? {
-    top: Math.max($("header").getBoundingClientRect().bottom, $(".traffic").getBoundingClientRect().bottom) + 42,
-    bottom: $("#command").classList.contains("hidden") ? innerHeight - 130 : $("#command").getBoundingClientRect().top - 8,
-  } : null;
+  const mobileLabelBounds =
+    innerWidth < 800 && playing
+      ? {
+          top:
+            Math.max(
+              $("header").getBoundingClientRect().bottom,
+              $(".traffic").getBoundingClientRect().bottom,
+            ) + 42,
+          bottom: $("#command").classList.contains("hidden")
+            ? innerHeight - 130
+            : $("#command").getBoundingClientRect().top - 8,
+        }
+      : null;
   for (const p of sim.planes) {
     if (FINISHED.has(p.state)) continue;
     active.add(p.id);
@@ -519,9 +553,14 @@ function updateModels(dt) {
     m.rotateX(p.state === "crashed" ? 0.22 : p.bank || 0);
     m.rotateZ(p.pitch || 0);
     const gear = m.getObjectByName("gear");
-    if (gear) gear.visible = p.y < 110;
+    if (gear) gear.visible = p.y < 110 || (p.state === "approach" && p.y < 400);
     const nav = m.getObjectByName("nav");
-    if (nav) nav.visible = Math.sin(elapsed * 6) > -0.1;
+    if (nav) nav.visible = true; // Position lights are steady.
+    const beacon = m.getObjectByName("beacon"),
+      strobe = m.getObjectByName("strobe");
+    if (beacon) beacon.visible = elapsed % 1.2 < 0.13;
+    const flash = elapsed % 1.1;
+    if (strobe) strobe.visible = flash < 0.06 || (flash > 0.14 && flash < 0.2);
     if (frameCounter % 15 === 0) {
       p.trail.push(new T.Vector3(p.x, p.y, p.z));
       if (p.trail.length > 30) p.trail.shift();
@@ -536,11 +575,10 @@ function updateModels(dt) {
       projected.z > 1 ||
       Math.abs(projected.x) > 1 ||
       Math.abs(projected.y) > 1 ||
-      (mobileLabelBounds && (
-        (-projected.y * .5 + .5) * innerHeight < mobileLabelBounds.top ||
-        (-projected.y * .5 + .5) * innerHeight > mobileLabelBounds.bottom ||
-        Math.abs(projected.x) > .8
-      )) ||
+      (mobileLabelBounds &&
+        ((-projected.y * 0.5 + 0.5) * innerHeight < mobileLabelBounds.top ||
+          (-projected.y * 0.5 + 0.5) * innerHeight > mobileLabelBounds.bottom ||
+          Math.abs(projected.x) > 0.8)) ||
       (view === "radar" &&
         camera.position.y > 12000 &&
         p.kind === "departure" &&
@@ -551,7 +589,8 @@ function updateModels(dt) {
     label.style.left = (projected.x * 0.5 + 0.5) * innerWidth + "px";
     label.style.top = (-projected.y * 0.5 + 0.5) * innerHeight + "px";
     label.classList.toggle("selected", p.id === selectedId);
-    label.innerHTML = `${p.id}<small>${Math.round((p.y * 3.281) / 100) * 100} FT · ${p.kind === "departure" ? p.controller : p.holdName || p.runway || "INBOUND"}</small>`;
+    const labelText = `${p.id}<small>${Math.round((p.y * 3.281) / 100) * 100} FT · ${p.kind === "departure" ? p.controller : p.holdName || p.runway || "INBOUND"}</small>`;
+    if (label.innerHTML !== labelText) label.innerHTML = labelText;
     if (
       view === "radar" &&
       innerWidth >= 800 &&
@@ -700,7 +739,9 @@ function updateUI() {
     b.classList.toggle("active", b.dataset.traffic === trafficFilter),
   );
   const listed = trafficFilter === "departure" ? departures : arrivals;
-  const rowMarkup = listed
+  if (!selected() && active.length) selectedId = (listed[0] || active[0]).id;
+  const rowMarkup =
+    listed
       .map((p) => {
         const alert = [...sim.conflicts, ...sim.runwayConflicts].some((c) =>
           c.split("/").includes(p.id),
@@ -713,7 +754,7 @@ function updateUI() {
               : p.groundBlocked
                 ? "GIVE WAY"
                 : p.state.replaceAll("-", " ").toUpperCase();
-        return `<button class="flight-row ${p.id === selectedId ? "selected" : ""}" data-flight="${p.id}"><span class="airline-mark" title="${AIRLINES[p.airline]}"><img src="/assets/airlines/${p.airline}.png" alt="${AIRLINES[p.airline]}" width="32" height="32"></span><span class="flight-info"><b>${p.id}</b><small>${p.kind === "departure" ? "To " : ""}${p.origin} · ${p.kind === "departure" ? `STAND ${p.stand}` : p.holdName || p.type}</small></span><span class="flight-data">${p.y < 15 ? p.runway || "GROUND" : Math.round((p.y * 3.281) / 100) * 100}<small class="${alert ? "alert" : ""}">${alert ? "CONFLICT" : status}</small></span></button>`;
+        return `<button class="flight-row ${p.id === selectedId ? "selected" : ""}" data-flight="${p.id}"><span class="airline-mark" title="${AIRLINES[p.airline]}"><img src="/assets/airlines/${p.airline}.png" alt="${AIRLINES[p.airline]}" width="32" height="32"></span><span class="flight-info"><b>${p.id}</b><small>${p.kind === "departure" ? "To " : ""}${p.origin} · ${p.kind === "departure" ? `${p.terminal} · STAND ${p.stand}` : p.holdName || p.type}</small></span><span class="flight-data">${p.y < 15 ? p.runway || "GROUND" : Math.round((p.y * 3.281) / 100) * 100}<small class="${alert ? "alert" : ""}">${alert ? "CONFLICT" : status}</small></span></button>`;
       })
       .join("") || '<p class="traffic-empty">Next flight is on its way.</p>';
   // Reuse the button itself: updating traffic must not swallow a click or
@@ -746,21 +787,23 @@ function updateUI() {
   if (playing)
     $("#mode-label").textContent = sim.over
       ? "SHIFT ENDED"
-      : paused ? "PAUSED · PRESS PLAY TO RESUME" : "YOU HAVE CONTROL";
+      : paused
+        ? "PAUSED · PRESS PLAY TO RESUME"
+        : "YOU HAVE CONTROL";
   $("#separation-status").textContent = sim.over
     ? "SHIFT ENDED"
     : alert
       ? "TRAFFIC CONFLICT"
       : "CONTINUOUS TRAFFIC ACTIVE";
   $("#separation-status").style.color = alert || sim.over ? "#ffa494" : "";
-  if (!selected() && active.length) selectedId = (listed[0] || active[0]).id;
   const p = selected();
   if (!drawing && p) {
-    $("#tip").textContent = p.kind === "departure"
-      ? "Ground → Tower → London Departure. Follow the clearance below."
-      : sim.landed === 0 && !p.runway && p.id === sim.planes[0]?.id
-        ? `First arrival: select 27L to clear ${p.id}.`
-        : "Keep final clear. Check Departures while arrivals are inbound.";
+    $("#tip").textContent =
+      p.kind === "departure"
+        ? "Ground → Tower → London Departure. Follow the clearance below."
+        : sim.landed === 0 && !p.runway && p.id === sim.planes[0]?.id
+          ? `First arrival: select 27L to clear ${p.id}.`
+          : "Keep final clear. Check Departures while arrivals are inbound.";
   }
   $("#command").classList.toggle("hidden", !playing || !p || sim.over);
   if (p) {
@@ -798,13 +841,17 @@ function updateUI() {
       $("#ground-action").textContent = groundAction[1];
     }
     $("#controller-channel").textContent = departure
-      ? `${p.controller} · ${p.controller === "GROUND" ? `STAND ${p.stand} → ${p.holdingPoint}` : p.controller === "TOWER" ? `RUNWAY ${p.runway}` : "CLIMB-OUT"}`
+      ? `${p.controller} · ${p.controller === "GROUND" ? `${p.terminal} · STAND ${p.stand} → ${p.holdingPoint}` : p.controller === "TOWER" ? `RUNWAY ${p.runway}` : "CLIMB-OUT"}`
       : `${p.controller || "APPROACH"} · ${p.holdName || "HEATHROW ARRIVALS"}`;
     $("#command-hint").textContent = departure
       ? {
-          "at-gate": `To ${p.destination}. Requesting pushback from stand ${p.stand}.`,
+          "at-gate": p.groundBlocked
+            ? "Taxi route in use. Remain on stand, then request pushback again."
+            : `To ${p.destination}. Requesting pushback from ${p.terminal} stand ${p.stand}.`,
           pushback: "Tug pushing back along the stand lead-in.",
-          "await-taxi": `Pushback complete. Assign the ground route to ${p.holdingPoint}.`,
+          "await-taxi": p.groundBlocked
+            ? "Opposing ground traffic. Hold position and request taxi again when clear."
+            : `Pushback complete. Assign the ground route to ${p.holdingPoint}.`,
           taxiing: p.groundBlocked
             ? "Holding for ground traffic ahead."
             : `Following mapped taxiways to ${p.holdingPoint} · ${Math.round(p.speed * 1.944)} KT`,
@@ -836,10 +883,12 @@ function updateUI() {
     $("#go-around").disabled = departure || !controllable;
     $("#draw").disabled = departure || !controllable;
   }
+  $("#tip").classList.toggle("hidden", !playing || sim.over || cinematic);
   $("#shift-report").classList.toggle("hidden", !sim.over || cinematic);
   if (playing && !cinematic) bestScore = saveBest(sim.score, bestScore);
   if (sim.over) {
-    $("#best-result").textContent = `Personal best on this browser: ${bestScore} points`;
+    $("#best-result").textContent =
+      `Personal best on this browser: ${bestScore} points`;
     if (!reportShown && !cinematic) {
       reportShown = true;
       $("#retry-shift").focus({ preventScroll: true });
@@ -947,14 +996,19 @@ $("#draw").onclick = () => {
 };
 function setPaused(value) {
   paused = value;
-  $("#pause").setAttribute("aria-label", paused ? "Resume simulation" : "Pause simulation");
+  $("#pause").setAttribute(
+    "aria-label",
+    paused ? "Resume simulation" : "Pause simulation",
+  );
   $("#pause").setAttribute("aria-pressed", String(paused));
   $("#pause").innerHTML = paused
     ? '<i class="play-icon"></i>'
     : '<i class="pause-icon"></i>';
   if (playing) updateUI();
 }
-function togglePause() { setPaused(!paused); }
+function togglePause() {
+  setPaused(!paused);
+}
 $("#pause").onclick = togglePause;
 $("#speed").onclick = () => {
   speed = speed === 1 ? 2 : speed === 2 ? 4 : 1;
@@ -965,7 +1019,9 @@ let pausedBeforeHelp = false;
 $("#help").onclick = () => {
   pausedBeforeHelp = paused;
   setPaused(true);
-  $("#help-play").textContent = playing ? "Back to your shift →" : "Ready for arrivals →";
+  $("#help-play").textContent = playing
+    ? "Back to your shift →"
+    : "Ready for arrivals →";
   $("#help-dialog").showModal();
 };
 $("#help-dialog").addEventListener("close", () => {
@@ -1050,7 +1106,14 @@ canvas.addEventListener("pointerup", (e) => {
   }
 });
 window.addEventListener("keydown", (e) => {
-  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target.isContentEditable || $("#help-dialog").open || e.repeat) return;
+  if (
+    e.target instanceof HTMLInputElement ||
+    e.target instanceof HTMLTextAreaElement ||
+    e.target.isContentEditable ||
+    $("#help-dialog").open ||
+    e.repeat
+  )
+    return;
   if (e.key === "Escape") {
     if (cinematic) exitFilm();
     document.body.classList.remove("clean");
@@ -1097,7 +1160,7 @@ function renderScene() {
   renderer.info.reset();
   post.render();
 }
-function step(dt) {
+function step(dt, cameraPose) {
   elapsed += dt;
   frameCounter++;
   if (!paused) {
@@ -1125,6 +1188,12 @@ function step(dt) {
     controls.target.lerp(new T.Vector3(p.x, p.y, p.z), 1 - Math.exp(-dt));
     controls.update();
   } else controls.update();
+  if (cameraPose && selected()) {
+    const p = selected(),
+      o = cameraPose.offset;
+    camera.position.set(p.x + o[0], p.y + o[1], p.z + o[2]);
+    camera.lookAt(p.x - 10, p.y, p.z);
+  }
   updateModels(dt);
   updateIncident();
   if (frameCounter % 6 === 0) redrawRoutes();
@@ -1176,6 +1245,7 @@ window.__HEATHROW__ = {
   exitFilm,
   command,
   setDay,
+  refreshUI: updateUI,
   get state() {
     return {
       playing,
@@ -1206,7 +1276,7 @@ window.__HEATHROW__ = {
     manual = true;
     paused = true;
   },
-  captureFrame(t) {
+  captureFrame(t, cameraPose) {
     manual = true;
     if (!cinematic) enterFilm();
     while (cinemaTime < t) {
@@ -1218,6 +1288,10 @@ window.__HEATHROW__ = {
     airport.update(sim.time);
     updateModels(0);
     cinema(t);
+    if (cameraPose) {
+      camera.position.fromArray(cameraPose.position);
+      camera.lookAt(...cameraPose.target);
+    }
     renderScene();
     // Offline capture must finish the GPU work before Chromium composites a frame.
     renderer.getContext().finish();

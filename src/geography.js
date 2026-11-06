@@ -36,7 +36,10 @@ export async function loadGeography() {
     new Promise((resolve, reject) => {
       let expired = false;
       const timer = setTimeout(
-        () => { expired = true; reject(new Error("Imagery tile timed out")); },
+        () => {
+          expired = true;
+          reject(new Error("Imagery tile timed out"));
+        },
         Math.max(1, Math.min(3500, deadline - performance.now())),
       );
       loader.loadAsync(url).then(

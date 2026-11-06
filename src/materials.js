@@ -4,7 +4,18 @@ export const materialState = {
   interior: { value: 0.35 },
 };
 const textures = {};
-const WEBP_TEXTURES = new Set(["asphalt_02_nor_gl_1k", "grass_ground_rough_1k", "asphalt_02_rough_1k", "concrete_floor_02_rough_1k", "concrete_diff_1k", "grass_ground_diff_1k", "concrete_floor_02_diff_1k", "grass_ground_nor_gl_1k", "asphalt_02_diff_1k", "concrete_rough_1k"]);
+const WEBP_TEXTURES = new Set([
+  "asphalt_02_nor_gl_1k",
+  "grass_ground_rough_1k",
+  "asphalt_02_rough_1k",
+  "concrete_floor_02_rough_1k",
+  "concrete_diff_1k",
+  "grass_ground_diff_1k",
+  "concrete_floor_02_diff_1k",
+  "grass_ground_nor_gl_1k",
+  "asphalt_02_diff_1k",
+  "concrete_rough_1k",
+]);
 let shaderSerial = 0;
 export async function loadMaterials() {
   const loader = new T.TextureLoader();

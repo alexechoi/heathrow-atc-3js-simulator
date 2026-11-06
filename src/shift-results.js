@@ -3,12 +3,18 @@ export function readBest() {
   try {
     const value = Number(localStorage.getItem(KEY));
     return Number.isFinite(value) && value >= 0 ? value : 0;
-  } catch { return 0; }
+  } catch {
+    return 0;
+  }
 }
 export function saveBest(score, previous) {
   const best = Math.max(previous, score);
   if (best > previous) {
-    try { localStorage.setItem(KEY, String(best)); } catch { /* Private/blocked storage: keep the session best. */ }
+    try {
+      localStorage.setItem(KEY, String(best));
+    } catch {
+      /* Private/blocked storage: keep the session best. */
+    }
   }
   return best;
 }

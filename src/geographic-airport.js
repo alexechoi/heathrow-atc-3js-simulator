@@ -411,7 +411,10 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     const x = p[0] - dir.x * 29,
       z = p[1] - dir.y * 29;
     // T5 is British Airways: keep Virgin tails out of its main and satellites.
-    const plane = aircraft(x > -700 && parkedCount % 7 === 0 ? "VS" : "BA", false);
+    const plane = aircraft(
+      x > -700 && parkedCount % 7 === 0 ? "VS" : "BA",
+      false,
+    );
     plane.position.set(x, plane.userData.groundHeight || 5, z);
     plane.rotation.y = -Math.atan2(dir.y, dir.x);
     parked.add(plane);
@@ -449,7 +452,10 @@ export function buildGeographicAirport(scene, { data, near, far }) {
   const planeBatches = new Map();
   parked.traverse((o) => {
     if (!o.isMesh) return;
-    const key = o.geometry.uuid + ":" + o.material.uuid;
+    // Spatial batches let the frustum discard stands behind the camera. A
+    // single airport-wide batch submitted every parked airframe in every view.
+    const cell = `${Math.floor(o.matrixWorld.elements[12] / 500)}:${Math.floor(o.matrixWorld.elements[14] / 500)}`;
+    const key = o.geometry.uuid + ":" + o.material.uuid + ":" + cell;
     if (!planeBatches.has(key))
       planeBatches.set(key, {
         geometry: o.geometry,
@@ -551,11 +557,12 @@ export function buildGeographicAirport(scene, { data, near, far }) {
     }
     return yes;
   }
-  const trees = new T.InstancedMesh(
-    new T.IcosahedronGeometry(1, 1),
-    new T.MeshStandardMaterial({ color: 0x475d36, roughness: 1 }),
-    9000,
-  );
+  const treeGeometry = new T.IcosahedronGeometry(1, 1);
+  const treeMaterial = new T.MeshStandardMaterial({
+    color: 0x475d36,
+    roughness: 1,
+  });
+  const treeBatches = new Map();
   const dummy = new T.Object3D();
   let count = 0;
   for (const wood of data.woods) {
@@ -575,16 +582,32 @@ export function buildGeographicAirport(scene, { data, near, far }) {
       dummy.scale.set(h * 0.55, h * 0.7, h * 0.55);
       dummy.rotation.y = rand() * 6;
       dummy.updateMatrix();
-      trees.setMatrixAt(count, dummy.matrix);
-      trees.setColorAt(
-        count,
-        new T.Color().setHSL(0.21 + rand() * 0.06, 0.23, 0.18 + rand() * 0.12),
-      );
+      const cell = `${Math.floor(x / 800)}:${Math.floor(z / 800)}`;
+      if (!treeBatches.has(cell)) treeBatches.set(cell, []);
+      treeBatches.get(cell).push({
+        matrix: dummy.matrix.clone(),
+        color: new T.Color().setHSL(
+          0.21 + rand() * 0.06,
+          0.23,
+          0.18 + rand() * 0.12,
+        ),
+      });
       count++;
     }
   }
-  trees.count = count;
-  group.add(trees);
+  for (const instances of treeBatches.values()) {
+    const trees = new T.InstancedMesh(
+      treeGeometry,
+      treeMaterial,
+      instances.length,
+    );
+    instances.forEach(({ matrix, color }, index) => {
+      trees.setMatrixAt(index, matrix);
+      trees.setColorAt(index, color);
+    });
+    trees.computeBoundingSphere();
+    group.add(trees);
+  }
   for (const [key, geos] of batches) {
     if (!geos.length) continue;
     const mesh = new T.Mesh(mergeGeometries(geos), mats[key]);

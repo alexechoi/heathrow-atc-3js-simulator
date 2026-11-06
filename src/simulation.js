@@ -188,14 +188,16 @@ export class Simulation {
         .filter((p) => p.kind === "departure" && !FINISHED.has(p.state))
         .map((p) => p.stand),
     );
-    const gates = groundLayout.gates;
+    const i = this.serial,
+      t = templates[i % templates.length];
+    const terminal = { BA: "T5", VS: "T3", EK: "T3", SQ: "T2" }[t[3]];
+    const gates = groundLayout.gates.filter((g) => g.terminal === terminal);
     const gate = gates
       .slice(this.serial % gates.length)
       .concat(gates.slice(0, this.serial % gates.length))
       .find((g) => !busy.has(g.stand));
     if (!gate) return null;
-    const i = this.serial++,
-      t = templates[i % templates.length];
+    this.serial++;
     const waypoints = (points) => points.map(([x, z]) => ({ x, y: 5, z }));
     const p = {
       ...flight(t, t[0].replace(/\d+/, String(600 + i))),
@@ -203,6 +205,7 @@ export class Simulation {
       destination: t[1],
       runway,
       stand: gate.stand,
+      terminal,
       holdingPoint: groundLayout.holds[runway].name,
       controller: "GROUND",
       x: gate.position[0],
@@ -219,8 +222,34 @@ export class Simulation {
     this.planes.push(p);
     return p;
   }
+  opposingGroundTraffic(p) {
+    const edge = (a, b) =>
+      `${a.x.toFixed(1)},${a.z.toFixed(1)}>${b.x.toFixed(1)},${b.z.toFixed(1)}`;
+    const reversed = new Set(
+      p.taxiRoute.slice(1).map((point, i) => edge(point, p.taxiRoute[i])),
+    );
+    return this.planes.some((other) => {
+      if (other === p || !["pushback", "taxiing"].includes(other.state))
+        return false;
+      const route =
+        other.state === "pushback"
+          ? other.taxiRoute
+          : [{ x: other.x, z: other.z }, ...other.route];
+      return route
+        .slice(1)
+        .some((point, i) => reversed.has(edge(route[i], point)));
+    });
+  }
   pushback(p) {
     if (!p || this.over || p.state !== "at-gate") return false;
+    if (this.opposingGroundTraffic(p)) {
+      p.groundBlocked = true;
+      this.events.push(
+        `${p.id}, opposing taxi traffic. Remain on stand and request pushback when clear.`,
+      );
+      return false;
+    }
+    p.groundBlocked = false;
     if (
       this.planes.some(
         (q) =>
@@ -241,6 +270,13 @@ export class Simulation {
   }
   taxi(p) {
     if (!p || this.over || p.state !== "await-taxi") return false;
+    if (this.opposingGroundTraffic(p)) {
+      p.groundBlocked = true;
+      this.events.push(
+        `${p.id}, taxi route in use. Hold position and request again when clear.`,
+      );
+      return false;
+    }
     p.route = p.taxiRoute.map((q) => ({ ...q }));
     p.state = "taxiing";
     this.events.push(
@@ -489,7 +525,44 @@ export class Simulation {
           const ahead =
             (other.x - p.x) * Math.cos(movingHeading) +
             (other.z - p.z) * Math.sin(movingHeading);
-          return distance < 85 && ahead > 5;
+          if (distance >= 85 || ahead <= 5) return false;
+          if (
+            ["taxiing", "pushback"].includes(p.state) &&
+            ["taxiing", "pushback"].includes(other.state)
+          ) {
+            // Reserve a merge for the flight already nearest its shared node.
+            // This also prevents circular yielding at curved junctions.
+            const key = (point) =>
+              `${point.x.toFixed(1)},${point.z.toFixed(1)}`;
+            const distances = new Map();
+            let x = other.x,
+              z = other.z,
+              total = 0;
+            for (const point of other.route) {
+              total += Math.hypot(point.x - x, point.z - z);
+              distances.set(key(point), total);
+              x = point.x;
+              z = point.z;
+            }
+            x = p.x;
+            z = p.z;
+            total = 0;
+            for (const point of p.route) {
+              total += Math.hypot(point.x - x, point.z - z);
+              const theirs = distances.get(key(point));
+              if (theirs !== undefined) {
+                if (
+                  total + 5 < theirs ||
+                  (Math.abs(total - theirs) <= 5 && p.age > other.age)
+                )
+                  return false;
+                break;
+              }
+              x = point.x;
+              z = point.z;
+            }
+          }
+          return true;
         });
       if (p.groundBlocked) {
         p.speed = 0;
@@ -764,9 +837,11 @@ export class Simulation {
     ) {
       this.departureAt = this.time + 65;
       const p = this.spawnDeparture(this.serial % 2 ? "27L" : "27R");
-      this.events.push(
-        `${p.id} to ${p.destination}, requesting pushback at stand ${p.stand}.`,
-      );
+      if (p)
+        this.events.push(
+          `${p.id} to ${p.destination}, requesting pushback at ${p.terminal} stand ${p.stand}.`,
+        );
+      else this.departureAt = this.time + 10; // Wait for a compatible stand.
     }
     // Keep a short history without accumulating aircraft during an endless session.
     this.planes = this.planes.filter(
