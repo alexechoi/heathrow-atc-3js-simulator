@@ -258,6 +258,7 @@ export class Simulation {
           Math.hypot(q.x - p.x, q.z - p.z) < 95,
       )
     ) {
+      p.groundBlocked = true;
       this.events.push(
         `${p.id}, stand ${p.stand}, pushback blocked by ground traffic.`,
       );
@@ -277,6 +278,7 @@ export class Simulation {
       );
       return false;
     }
+    p.groundBlocked = false;
     p.route = p.taxiRoute.map((q) => ({ ...q }));
     p.state = "taxiing";
     this.events.push(

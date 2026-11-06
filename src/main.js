@@ -124,7 +124,7 @@ const [, , , geography] = await Promise.all([
 $("#loading-detail").textContent = "Opening the tower…";
 const airport = buildGeographicAirport(scene, geography);
 const post = createPostProcessing(renderer, scene, camera);
-function setGraphics(mode) {
+function setGraphics(mode, persist = true) {
   const smooth = mode === "smooth";
   renderer.setPixelRatio(Math.min(devicePixelRatio, smooth ? 1.25 : 1.75));
   renderer.setSize(innerWidth, innerHeight);
@@ -134,15 +134,24 @@ function setGraphics(mode) {
   sun.shadow.needsUpdate = true;
   post.quality(mode);
   $("#graphics-quality").value = smooth ? "smooth" : "high";
+  document.body.classList.toggle("smooth-graphics", smooth);
   try {
-    localStorage.setItem("heathrow-graphics", smooth ? "smooth" : "high");
+    if (persist)
+      localStorage.setItem("heathrow-graphics", smooth ? "smooth" : "high");
   } catch {}
 }
 $("#graphics-quality").onchange = (event) => setGraphics(event.target.value);
+let savedGraphics;
 try {
-  if (localStorage.getItem("heathrow-graphics") === "smooth")
-    setGraphics("smooth");
+  savedGraphics = localStorage.getItem("heathrow-graphics");
 } catch {}
+// A full 4096px shadow target is expensive on phone GPUs. Keep the same
+// source textures and markings; let an explicit High detail choice override.
+if (
+  savedGraphics === "smooth" ||
+  (savedGraphics !== "high" && innerWidth < 700)
+)
+  setGraphics("smooth", false);
 document.querySelector("#imagery-credit").textContent = IMAGERY_CREDIT;
 document.querySelector("#imagery-credit").title = geography.near
   ? "Live Esri satellite imagery, aligned to mapped Heathrow geometry."

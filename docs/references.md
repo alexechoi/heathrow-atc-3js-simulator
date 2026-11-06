@@ -110,3 +110,15 @@ The procedural A350, A380 and 777 previously reused one scaled wing planform. Th
 The model browser check verifies all 11 entries and view framing, the A320neo's length/span and wheel-to-ground alignment, and the A380's wheel count. `scripts/aircraft-integration-e2e.mjs` checks that the dedicated A320neo is used by traffic and its gear appears on the ground and disappears in flight.
 
 [Watch the 12-second aircraft review reel](media/aircraft-model-review.mp4). This is a local model turntable, not a new airport flythrough: 1280 × 720, 24 fps, H.264, silent. `node scripts/capture-models.mjs` reproduces its three camera passes.
+
+## Release review — 6 November 2026
+
+The opening camera now shows the T5 complex instead of the generic off-airport buildings. T5's parked stands use BA tails. The phone opening screen hides the traffic panel until play starts; in-play flight labels stay within the available map area. [Desktop](screenshots/release-desktop.jpg), [phone opening](screenshots/release-mobile.jpg), and [phone departure controls](screenshots/release-mobile-playing.jpg) were captured in Chromium from the release candidate.
+
+The imported aircraft passed the same model dimensions, framing and gear checks after Meshopt/WebP encoding. Encoding retains mesh topology and 2K texture dimensions; aggregate GLBs fell from 26.7 MB to 7.5 MB. Position lights remain steady, anti-collision/strobe groups flash separately, and cleared arrivals lower their gear earlier than departing aircraft retract it. The surface texture dimensions and vector runway paint remain unchanged.
+
+Release interaction checks cover preserving the shift through help and the flythrough, keyboard focus during board refreshes, background-tab pausing, personal-best storage/copying, both graphics presets and phone layout. Startup checks cover failed assets, blocked imagery, unavailable WebGL and context loss. The full ground-to-tower and mouse/touch route checks also pass.
+
+Parked aircraft and woodland are now instanced in spatial groups, so objects outside the camera frustum can be skipped. With cached shadows, the same opening view submits about 1.61 million triangles instead of 3.32 million, using the same geometry and textures. A three-frame software-rendered comparison reduced median capture time from 4.94 s to 4.39 s; this is a capture-worker measurement, not a claim about consumer-device frame rates.
+
+The departure layout now reserves 24 mapped stands across T5 (BA), T3 (Virgin/Emirates) and T2 (Singapore), rather than allocating every airline to T2. Each runway uses a shared mapped feeder to prevent opposing merges near the hold. Conflicting opposite-direction taxi routes wait for clearance, and pushback/taxi merges give priority to the aircraft nearest the shared junction. Three two-hour ground-control scenarios completed 100–102 departures each with no collision, strike or deadlock; the ordinary 15-minute ground-delay limit remains in force. This models terminal preference, not the full set of operational stand restrictions.

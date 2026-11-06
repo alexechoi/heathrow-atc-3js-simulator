@@ -1411,3 +1411,10 @@ body.drawing #world {
 body:not(.playing) #labels {
   display: none;
 }
+
+.smooth-graphics .panel,
+.smooth-graphics .view-toolbar,
+.smooth-graphics .secondary,
+.smooth-graphics #toast {
+  backdrop-filter: none;
+}
