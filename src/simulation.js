@@ -85,7 +85,7 @@ export function approachPoints(id) {
     { x: r.threshold + 2300, y: 180, z: r.z },
     { x: r.threshold + 1200, y: 85, z: r.z },
     // Touch down inside the runway, near the 300 m aiming-point markings.
-    { x: r.threshold - 300, y: 7, z: r.z },
+    { x: r.threshold - 300, y: 5, z: r.z, kind: "touchdown" },
     { x: r.threshold - 1150, y: 5, z: r.z },
   ];
 }
@@ -713,13 +713,15 @@ export class Simulation {
               : 90;
         p.speed = speed;
         const reached =
-          q.kind === "vector"
-            ? dist < 180 || (projection >= 1 && dist < 700)
-            : dist < (q.y === 7 || p.state === "rollout" ? 95 : 220);
+          q.kind === "touchdown"
+            ? dist < Math.max(2, speed * dt)
+            : q.kind === "vector"
+              ? dist < 180 || (projection >= 1 && dist < 700)
+              : dist < (p.state === "rollout" ? 95 : 220);
         if (reached) {
           p.routeStart = { ...q };
           p.route.shift();
-          if (p.state === "approach" && q.y === 7) {
+          if (p.state === "approach" && q.kind === "touchdown") {
             p.state = "rollout";
             p.y = 5;
             this.events.push(`${p.id}, welcome to Heathrow. Vacate when able.`);

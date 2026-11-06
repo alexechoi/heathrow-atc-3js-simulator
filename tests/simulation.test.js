@@ -84,9 +84,14 @@ test("runway points descend and finish west of threshold", () => {
     s.planes = [arrival];
     s.spawnAt = s.departureAt = Infinity;
     s.clear(arrival, id);
-    for (let i = 0; i < 3000 && arrival.state === "approach"; i++)
+    let lastAirborneHeight;
+    for (let i = 0; i < 3000 && arrival.state === "approach"; i++) {
+      lastAirborneHeight = arrival.y;
       s.tick(0.1);
+    }
     assert.equal(arrival.state, "rollout");
+    assert.ok(lastAirborneHeight - arrival.y < 1,
+      "Touchdown must not teleport an airborne aircraft onto the runway");
     assert.ok(
       arrival.x <= RUNWAYS[id].threshold - 200,
       "Touchdown occurs inside the runway, beyond the threshold markings",
